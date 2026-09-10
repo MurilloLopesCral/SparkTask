@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1788534418121,
+      "tag": "0000_dizzy_microchip",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788541622367,
+      "tag": "0001_tough_sumo",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788547195748,
+      "tag": "0002_dizzy_apocalypse",
+      "breakpoints": true
+    }
+  ]
+}

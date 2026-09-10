@@ -1,0 +1,371 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/email/send": {
+      "post": {
+        "operationId": "EmailController_sendEmail",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Email send request accepted by SMTP server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendEmailResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or SMTP connection/send failure"
+          }
+        },
+        "summary": "Send an email using request-provided SMTP configuration",
+        "tags": [
+          "email"
+        ]
+      }
+    },
+    "/reconciliation/wms/refresh": {
+      "post": {
+        "description": "Truncates wms_storage and inserts the incoming WMS rows, then truncates erp_storage and populates it by calling the Senior ERP SOAP endpoint. Both tables share the same runId.",
+        "operationId": "ReconciliationController_refreshSnapshot",
+        "parameters": [
+          {
+            "name": "sourcePayloadRef",
+            "required": false,
+            "in": "query",
+            "description": "Optional trace identifier (file name, webhook id, integration run id).",
+            "schema": {
+              "example": "wms-webhook-2026-06-30",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "WMS payload as array or object with `list` array.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "list": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      }
+                    },
+                    "additionalProperties": true
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Both tables refreshed successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshWmsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "WMS payload is invalid, or ERP SOAP request/response failed."
+          }
+        },
+        "summary": "Receive WMS stock payload, refresh both staging tables, and fetch ERP stock from Senior SOAP — all in one call",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Email Microservice API",
+    "description": "Send emails using request-level SMTP configuration",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "email",
+      "description": ""
+    }
+  ],
+  "servers": [],
+  "components": {
+    "schemas": {
+      "SmtpAuthDto": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "string",
+            "example": "user@example.com",
+            "description": "SMTP authentication username"
+          },
+          "pass": {
+            "type": "string",
+            "example": "super-secret-password",
+            "description": "SMTP authentication password"
+          }
+        },
+        "required": [
+          "user",
+          "pass"
+        ]
+      },
+      "SmtpConfigDto": {
+        "type": "object",
+        "properties": {
+          "host": {
+            "type": "string",
+            "example": "smtp.example.com",
+            "description": "SMTP host provided by the consuming application"
+          },
+          "port": {
+            "type": "number",
+            "example": 587,
+            "description": "SMTP port for this request. Defaults to 587 when omitted.",
+            "default": 587
+          },
+          "secure": {
+            "type": "boolean",
+            "example": false,
+            "description": "Use SMTPS (true) or STARTTLS/plain SMTP (false).",
+            "default": false
+          },
+          "name": {
+            "type": "string",
+            "example": "email-api.internal",
+            "description": "Optional client name sent in the SMTP EHLO/HELO command."
+          },
+          "auth": {
+            "description": "Optional SMTP credentials.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SmtpAuthDto"
+              }
+            ]
+          },
+          "ignoreTLS": {
+            "type": "boolean",
+            "example": false,
+            "description": "Skip STARTTLS even if the server supports it.",
+            "default": false
+          },
+          "requireTLS": {
+            "type": "boolean",
+            "example": false,
+            "description": "Require STARTTLS before authentication/sending.",
+            "default": false
+          }
+        },
+        "required": [
+          "host"
+        ]
+      },
+      "SendEmailDto": {
+        "type": "object",
+        "properties": {
+          "smtp": {
+            "description": "Request-scoped SMTP connection details.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SmtpConfigDto"
+              }
+            ]
+          },
+          "from": {
+            "type": "string",
+            "example": "Billing Team <billing@example.com>",
+            "description": "From address for this email."
+          },
+          "to": {
+            "example": [
+              "customer@example.com"
+            ],
+            "description": "Recipient email addresses.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cc": {
+            "example": [
+              "audit@example.com"
+            ],
+            "description": "CC recipients.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "bcc": {
+            "example": [
+              "hidden@example.com"
+            ],
+            "description": "BCC recipients.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "replyTo": {
+            "example": [
+              "support@example.com"
+            ],
+            "description": "Reply-to addresses.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "subject": {
+            "type": "string",
+            "example": "Your invoice is ready",
+            "description": "Email subject line."
+          },
+          "text": {
+            "type": "string",
+            "example": "Your invoice has been generated.",
+            "description": "Plain text body. Required when html is missing."
+          },
+          "html": {
+            "type": "string",
+            "example": "<p>Your invoice has been generated.</p>",
+            "description": "HTML body. Required when text is missing."
+          },
+          "headers": {
+            "type": "object",
+            "example": {
+              "X-Correlation-Id": "af8d4d6a"
+            },
+            "description": "Optional custom headers to include in the outgoing message."
+          },
+          "attachments": {
+            "type": "array",
+            "description": "Optional file attachments.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "smtp",
+          "from",
+          "to",
+          "subject"
+        ]
+      },
+      "SendEmailResponseDto": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "example": "<8f3b445f-2f44-cde5-ecff-b2cc8e9b95cb@example.com>",
+            "description": "Message identifier returned by the SMTP server."
+          },
+          "accepted": {
+            "example": [
+              "customer@example.com"
+            ],
+            "description": "Accepted recipient addresses.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rejected": {
+            "example": [],
+            "description": "Rejected recipient addresses.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "response": {
+            "type": "string",
+            "example": "250 2.0.0 Ok: queued as 8F1C8234",
+            "description": "Raw SMTP response after send attempt."
+          },
+          "envelope": {
+            "type": "object",
+            "example": {
+              "from": "Billing Team <billing@example.com>",
+              "to": [
+                "customer@example.com"
+              ]
+            },
+            "description": "Envelope used during SMTP transaction."
+          }
+        },
+        "required": [
+          "messageId",
+          "accepted",
+          "rejected",
+          "response",
+          "envelope"
+        ]
+      },
+      "RefreshWmsResponseDto": {
+        "type": "object",
+        "properties": {
+          "runId": {
+            "type": "string",
+            "example": "d8849f67-7f18-4f8f-8cee-d8e37904bd8c"
+          },
+          "insertedWmsRows": {
+            "type": "number",
+            "example": 15234
+          },
+          "insertedErpRows": {
+            "type": "number",
+            "example": 88
+          },
+          "clearedTables": {
+            "example": [
+              "wms_storage",
+              "erp_storage"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "runId",
+          "insertedWmsRows",
+          "insertedErpRows",
+          "clearedTables"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,607 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn-svelte/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
+
+/* =============================================================================
+   SparkTask — Design System
+   Source of truth: /DESIGN.md ("Dell 1996 Analysis")
+
+   Three families, no webfonts (period-accurate: 1996 had none):
+     Arial Black   -> display headings
+     Helvetica     -> UI: titles, buttons, labels
+     Times Roman   -> body copy  (serif body is the era's signature)
+
+   DOCUMENTED DEVIATIONS from DESIGN.md (each one is required by shadcn or by
+   basic 2026 usability; nothing else was invented):
+     1. --muted / --accent: DESIGN.md has no grey tier — the 1996 page separated
+        surfaces with 1px black hairlines only. shadcn needs a muted surface
+        (TabsList, Skeleton, hover). Added as ACHROMATIC grey so the closed
+        chromatic palette stays closed.
+     2. --destructive maps to Dell red. DESIGN.md reserves red for cta-block-red
+        + phone-callout only, but it is the palette's single red and destructive
+        intent is the same urgency signal. Do NOT use red anywhere else.
+     3. --primary maps to frame-ink (BLACK), not Dell red — because
+        `button-primary` is a black fill. Mapping red to primary would turn
+        every shadcn button red and destroy the red-as-attention-pole rule.
+     4. Dark mode is a modern invention; the 1996 design has none. Implemented
+        by inverting canvas/ink and keeping the 8 catalog tints intact.
+     5. Hover/focus states: DESIGN.md documents Default only. Interactive
+        feedback is a hard, instant inversion (no transition, no soft shadow),
+        which is the period-accurate behaviour.
+   ============================================================================= */
+
+/* --- Brand primitives ------------------------------------------------------ */
+:root {
+	--canvas: #ffffff;
+	--ink: #000000;
+	--frame: #000000;
+
+	--dell-red: #e91d2a;
+	--on-red: #ffffff;
+	--sticker-yellow: #fcc20f;
+	--purple-stripe: #6a26a4;
+	--mosaic-link: #0000ee;
+
+	/* Ribbon-card tint family — one per project line. Closed palette. */
+	--tint-olive: #8e8a25;
+	--tint-sage: #b3bd95;
+	--tint-salmon: #d77a7a;
+	--tint-peach: #e6915d;
+	--tint-lime: #c0d4a7;
+	--tint-sky: #9ab6c8;
+	--tint-steel: #a5b8c0;
+	--tint-periwinkle: #8c9ae0;
+
+	/* Deviation 1 — achromatic only */
+	--grey-surface: #e8e8e8;
+	--grey-ink: #555555;
+}
+
+.dark {
+	--canvas: #000000;
+	--ink: #ffffff;
+	--frame: #ffffff;
+	--grey-surface: #1c1c1c;
+	--grey-ink: #a0a0a0;
+	--mosaic-link: #7d8cff;
+}
+
+/* --- shadcn semantic contract ---------------------------------------------- */
+:root,
+.dark {
+	--background: var(--canvas);
+	--foreground: var(--ink);
+	--card: var(--canvas);
+	--card-foreground: var(--ink);
+	--popover: var(--canvas);
+	--popover-foreground: var(--ink);
+
+	/* button-primary = black fill / white label */
+	--primary: var(--frame);
+	--primary-foreground: var(--canvas);
+
+	/* button-secondary = canvas fill / ink label + 1px hairline */
+	--secondary: var(--canvas);
+	--secondary-foreground: var(--ink);
+
+	--muted: var(--grey-surface);
+	--muted-foreground: var(--grey-ink);
+	--accent: var(--grey-surface);
+	--accent-foreground: var(--ink);
+
+	--destructive: var(--dell-red);
+	--destructive-foreground: var(--on-red);
+
+	/* Elevation level 1 — the hairline IS the depth vocabulary */
+	--border: var(--frame);
+	--input: var(--frame);
+	--ring: var(--mosaic-link);
+
+	/* Charts drawn from the catalog tint family, in catalog order */
+	--chart-1: var(--tint-sage);
+	--chart-2: var(--tint-salmon);
+	--chart-3: var(--tint-periwinkle);
+	--chart-4: var(--tint-peach);
+	--chart-5: var(--tint-sky);
+
+	/* rounded.none is the universal modifier. Only cert seals get rounded-full. */
+	--radius: 0px;
+
+	--sidebar: var(--canvas);
+	--sidebar-foreground: var(--ink);
+	--sidebar-primary: var(--dell-red); /* ex-app-shell-row activeIndicator */
+	--sidebar-primary-foreground: var(--on-red);
+	--sidebar-accent: var(--grey-surface);
+	--sidebar-accent-foreground: var(--ink);
+	--sidebar-border: var(--frame);
+	--sidebar-ring: var(--mosaic-link);
+}
+
+@theme inline {
+	/* Type families */
+	--font-display: 'Arial Black', 'Arial Bold', Gadget, Helvetica, sans-serif;
+	--font-sans: Helvetica, Arial, sans-serif;
+	--font-serif: 'Times New Roman', Times, serif;
+
+	/* Type scale — exactly the DESIGN.md hierarchy table */
+	--text-display: 36px;
+	--text-display--line-height: 1;
+	--text-display--font-weight: 900;
+
+	--text-h1: 24px;
+	--text-h1--line-height: 1.05;
+	--text-h1--font-weight: 900;
+
+	--text-h2: 16px;
+	--text-h2--line-height: 1.2;
+	--text-h2--font-weight: 700;
+
+	--text-h3: 14px;
+	--text-h3--line-height: 1.2;
+	--text-h3--font-weight: 700;
+
+	--text-body: 14px;
+	--text-body--line-height: 1.4;
+	--text-body--font-weight: 400;
+
+	--text-body-sm: 12px;
+	--text-body-sm--line-height: 1.4;
+	--text-body-sm--font-weight: 400;
+
+	--text-caption: 11px;
+	--text-caption--line-height: 1.35;
+	--text-caption--font-weight: 400;
+
+	--text-button: 12px;
+	--text-button--line-height: 1;
+	--text-button--font-weight: 700;
+
+	--text-ui-label: 12px;
+	--text-ui-label--line-height: 1;
+	--text-ui-label--font-weight: 700;
+
+	/* Spacing — 4px base with 2/6/10 intermediates (table cellpadding era) */
+	--spacing-xxs: 2px;
+	--spacing-xs: 4px;
+	--spacing-s: 6px;
+	--spacing-sm: 8px;
+	--spacing-m: 10px;
+	--spacing-md: 12px;
+	--spacing-lg: 16px;
+	--spacing-xl: 20px;
+	--spacing-xxl: 24px;
+	--spacing-section-sm: 32px;
+	--spacing-section: 40px;
+	--spacing-section-lg: 48px;
+
+	/* Grid & container — fixed 760px, the 1996 800x600 target */
+	--container-catalog: 760px;
+	--container-form: 28rem;
+	/* Our spacing scale reuses Tailwind's reserved size keywords (xs, sm, md,
+	   lg, xl) for different, smaller values (4/8/12/16/20px). Tailwind
+	   always resolves the w / min-w / max-w / size utility families against
+	   the spacing scale first when a keyword matches, so pairing any of
+	   those utilities with one of those five keywords silently collapses to
+	   our spacing value instead of Tailwind's intended rem-based size —
+	   restating the container theme namespace does not fix this. Use a
+	   named --container-* token (see catalog/form above) or an arbitrary
+	   bracket value for sizing instead of a bare size keyword. */
+
+	/* Brand colour utilities: bg-dell-red, bg-tint-sage, text-mosaic-link, ... */
+	--color-canvas: var(--canvas);
+	--color-ink: var(--ink);
+	--color-frame: var(--frame);
+	--color-dell-red: var(--dell-red);
+	--color-on-red: var(--on-red);
+	--color-sticker-yellow: var(--sticker-yellow);
+	--color-purple-stripe: var(--purple-stripe);
+	--color-mosaic-link: var(--mosaic-link);
+	--color-tint-olive: var(--tint-olive);
+	--color-tint-sage: var(--tint-sage);
+	--color-tint-salmon: var(--tint-salmon);
+	--color-tint-peach: var(--tint-peach);
+	--color-tint-lime: var(--tint-lime);
+	--color-tint-sky: var(--tint-sky);
+	--color-tint-steel: var(--tint-steel);
+	--color-tint-periwinkle: var(--tint-periwinkle);
+
+	/* shadcn contract */
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	--color-chart-1: var(--chart-1);
+	--color-chart-2: var(--chart-2);
+	--color-chart-3: var(--chart-3);
+	--color-chart-4: var(--chart-4);
+	--color-chart-5: var(--chart-5);
+	--color-sidebar: var(--sidebar);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-ring: var(--sidebar-ring);
+
+	/* Every radius collapses to 0. Sharp corners are non-negotiable. */
+	--radius-sm: 0px;
+	--radius-md: 0px;
+	--radius-lg: 0px;
+	--radius-xl: 0px;
+	--radius-2xl: 0px;
+	--radius-3xl: 0px;
+	--radius-4xl: 0px;
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+
+	html {
+		/* Serif body — the inverse of the modern convention, by design. */
+		@apply font-serif;
+	}
+
+	body {
+		@apply bg-background text-body text-foreground;
+	}
+
+	/* Display register: Arial Black 900, all-caps, tight leading. */
+	h1 {
+		@apply font-display text-h1 uppercase;
+	}
+	h2 {
+		@apply font-sans text-h2 uppercase;
+	}
+	h3 {
+		@apply font-sans text-h3 uppercase;
+	}
+
+	a {
+		@apply text-mosaic-link underline;
+	}
+
+	/* No soft focus glow — a hard 2px Mosaic-blue outline. */
+	:focus-visible {
+		@apply outline-2 outline-offset-0 outline-ring;
+	}
+}
+
+/* Shared button chrome. Declared as @utility (not a plain class) so the
+   variants below can @apply it — Tailwind v4 only applies utilities. */
+@utility btn {
+	@apply inline-flex cursor-pointer items-center justify-center gap-2 border border-frame px-lg py-s font-sans text-button uppercase;
+}
+
+@layer components {
+	/* --- Frame & banner ----------------------------------------------------- */
+
+	/* The literal black picture frame. Brand's strongest container cue. */
+	.page-frame {
+		@apply bg-frame p-sm;
+	}
+	@media (max-width: 768px) {
+		.page-frame {
+			@apply p-xs;
+		}
+	}
+	@media (max-width: 480px) {
+		.page-frame {
+			@apply p-xxs;
+		}
+	}
+
+	.page-frame-inner {
+		@apply bg-canvas;
+	}
+
+	/* --- App shell (post-login) ---------------------------------------------
+	   Not part of the 1996 marketing chrome — the authenticated app gets a
+	   modern, short top bar instead of the full page-frame treatment. Still
+	   sharp-cornered and flat, per brand, with a fast hover instead of the
+	   marketing site's hard instant-invert. */
+
+	.app-nav {
+		@apply sticky top-0 z-50 flex h-14 items-center justify-between gap-lg bg-frame px-lg;
+	}
+	.app-nav a {
+		@apply no-underline;
+	}
+
+	.app-nav-icon {
+		@apply grid size-10 place-items-center text-canvas transition-colors hover:bg-canvas/10;
+	}
+	.app-nav-icon[aria-current='page'] {
+		@apply bg-canvas text-ink;
+	}
+
+	.kanban-column {
+		@apply rounded-md border border-frame/15 bg-muted/60 p-sm;
+	}
+
+	.kanban-drop-zone {
+		@apply grid h-16 place-items-center border-2 border-dashed border-frame/40 font-sans text-ui-label text-muted-foreground uppercase;
+	}
+
+	/* Rendered task-description markdown — shared by the full dialog view and
+	   the truncated card/kanban preview. Plain descendant selectors, not
+	   Svelte's `:global()` — this file is already unscoped global CSS. */
+	.markdown-body p {
+		margin-bottom: 0.5em;
+	}
+	.markdown-body p:last-child {
+		margin-bottom: 0;
+	}
+	.markdown-body strong {
+		font-weight: 700;
+	}
+	.markdown-body a {
+		color: var(--mosaic-link);
+		text-decoration: underline;
+	}
+	.markdown-body ul,
+	.markdown-body ol {
+		margin-bottom: 0.5em;
+		padding-left: 1.25em;
+	}
+	.markdown-body ul {
+		list-style: disc;
+	}
+	.markdown-body ol {
+		list-style: decimal;
+	}
+	.markdown-body code {
+		background: var(--muted);
+		padding: 0 4px;
+		font-family: var(--font-mono, monospace);
+		font-size: 0.9em;
+	}
+	.markdown-body pre {
+		background: var(--muted);
+		padding: 8px;
+		margin-bottom: 0.5em;
+		overflow-x: auto;
+	}
+	.markdown-body pre code {
+		background: none;
+		padding: 0;
+	}
+	.markdown-body blockquote {
+		border-left: 2px solid var(--frame);
+		padding-left: 8px;
+		color: var(--grey-ink);
+	}
+	.markdown-body h1,
+	.markdown-body h2,
+	.markdown-body h3 {
+		margin-top: 0.5em;
+		margin-bottom: 0.25em;
+		font-family: var(--font-sans);
+		font-weight: 700;
+		text-transform: uppercase;
+	}
+
+	.data-table {
+		@apply border border-frame;
+	}
+	.data-table th,
+	.data-table td {
+		@apply border-r border-frame last:border-r-0;
+	}
+	.data-table thead {
+		@apply bg-muted;
+	}
+
+	.top-banner {
+		@apply bg-frame px-lg py-md font-sans text-h2 text-canvas uppercase;
+	}
+
+	/* Red on black, pinned top-right. Never remove it — it IS the navigation. */
+	.phone-callout {
+		@apply bg-frame px-sm py-xs font-sans text-h2 text-dell-red;
+	}
+
+	/* --- Section eyebrow blocks --------------------------------------------- */
+
+	.section-eyebrow {
+		@apply px-lg py-xxl font-display text-display text-ink uppercase;
+	}
+	.section-eyebrow--olive {
+		@apply bg-tint-olive;
+	}
+	.section-eyebrow--salmon {
+		@apply bg-tint-salmon;
+	}
+
+	/* --- Ribbon cards (signature component) --------------------------------- */
+
+	.ribbon-card {
+		@apply border border-frame;
+	}
+
+	.ribbon-card-title {
+		@apply border-b border-frame bg-canvas px-md py-s font-sans text-h3 text-ink uppercase;
+	}
+
+	.ribbon-card-body {
+		@apply px-lg py-md font-serif text-body text-ink;
+	}
+	.ribbon-card-body--sage {
+		@apply bg-tint-sage;
+	}
+	.ribbon-card-body--salmon {
+		@apply bg-tint-salmon;
+	}
+	.ribbon-card-body--peach {
+		@apply bg-tint-peach;
+	}
+	.ribbon-card-body--lime {
+		@apply bg-tint-lime;
+	}
+	.ribbon-card-body--sky {
+		@apply bg-tint-sky;
+	}
+	.ribbon-card-body--steel {
+		@apply bg-tint-steel;
+	}
+	.ribbon-card-body--periwinkle {
+		@apply bg-tint-periwinkle;
+	}
+
+	/* Photo notch: rightmost ~25%, hanging past the body bar like a pinned card. */
+	.ribbon-photo-notch {
+		@apply -my-sm shrink-0;
+		width: 25%;
+	}
+	@media (max-width: 480px) {
+		.ribbon-photo-notch {
+			@apply my-0 w-full;
+		}
+	}
+
+	/* --- Call to action ------------------------------------------------------ */
+
+	/* One per page, maximum. The singular attention pole. */
+	.cta-block-red {
+		@apply border border-frame bg-dell-red p-lg font-serif text-body text-on-red;
+	}
+
+	/* --- Stickers (GIF-era overlays) ----------------------------------------- */
+
+	/* Elevation level 3 — hard-edge bevel, never a soft shadow. */
+	.bevel {
+		box-shadow:
+			inset 1px 1px 0 rgb(255 255 255 / 0.6),
+			2px 2px 0 var(--frame);
+	}
+
+	/* Hard offset "floating card" bevel — no blur, just a stacked black shadow
+	   that grows on hover, echoing the .btn-primary press-down affordance but
+	   inverted (cards lift instead of sink). */
+	.card-bevel {
+		@apply border border-frame transition-transform duration-150;
+		box-shadow: 3px 3px 0 var(--frame);
+	}
+	.card-bevel:hover {
+		@apply -translate-x-0.5 -translate-y-0.5;
+		box-shadow: 5px 5px 0 var(--frame);
+	}
+
+	.sticker-buy {
+		@apply border border-frame bg-sticker-yellow px-sm py-xs font-sans text-button text-ink;
+	}
+
+	.sticker-new {
+		@apply inline-block bg-sticker-yellow px-sm py-xs font-sans text-button text-ink;
+		rotate: -15deg;
+	}
+
+	/* Same bevel technique as the stickers above, on a badge's own fill colour
+	   instead of the sticker yellow — keeps status/priority/type colour-coded
+	   while still reading as a pinned catalog tag. */
+	.badge-sticker {
+		@apply border border-frame;
+		box-shadow:
+			inset 1px 1px 0 rgb(255 255 255 / 0.6),
+			2px 2px 0 var(--frame);
+	}
+
+	.cert-seal {
+		@apply grid size-16 place-items-center rounded-full bg-dell-red text-center font-sans text-button text-canvas;
+	}
+
+	/* --- Navigation ---------------------------------------------------------- */
+
+	.icon-label-nav {
+		@apply grid place-items-center gap-1 bg-canvas p-sm font-sans text-ui-label text-ink uppercase;
+		min-width: 44px; /* modern touch target — 1996 sat at ~24px */
+		min-height: 44px;
+	}
+
+	/* --- Inputs & buttons ---------------------------------------------------- */
+
+	.text-input {
+		@apply w-full border border-frame bg-canvas px-s py-xs font-serif text-body text-ink;
+	}
+	.text-input[aria-invalid='true'] {
+		@apply border-2 border-dell-red;
+	}
+
+	.alert-error {
+		@apply flex items-center gap-sm border border-l-4 border-frame border-l-dell-red bg-canvas px-md py-s font-serif text-body-sm text-dell-red;
+	}
+
+	.btn:disabled {
+		@apply cursor-not-allowed opacity-40;
+	}
+
+	/* Hover/active = hard instant inversion. No transition by design. */
+	.btn-primary {
+		@apply btn bg-frame text-canvas;
+	}
+	.btn-primary:not(:disabled):hover {
+		@apply bg-canvas text-ink;
+	}
+	.btn-primary:not(:disabled):active {
+		@apply translate-x-px translate-y-px bg-frame text-canvas;
+	}
+
+	.btn-secondary {
+		@apply btn bg-canvas text-ink;
+	}
+	.btn-secondary:not(:disabled):hover {
+		@apply bg-frame text-canvas;
+	}
+	.btn-secondary:not(:disabled):active {
+		@apply translate-x-px translate-y-px bg-canvas text-ink;
+	}
+
+	.btn-link {
+		@apply font-serif text-body text-mosaic-link underline;
+	}
+
+	/* --- Footer -------------------------------------------------------------- */
+
+	.footer-band {
+		@apply border-t border-frame bg-canvas p-lg font-serif text-body-sm text-ink;
+	}
+
+	/* --- Layout helpers ------------------------------------------------------ */
+
+	/* Fixed 760px catalog column, centred like a magazine spread. */
+	.catalog-container {
+		@apply mx-auto w-full max-w-catalog;
+	}
+
+	/* Two-column outer structure: 28% rail / 72% content. */
+	.catalog-split {
+		@apply grid gap-lg;
+		grid-template-columns: 28% 1fr;
+	}
+	@media (max-width: 768px) {
+		.catalog-split {
+			@apply grid-cols-1;
+		}
+	}
+}
