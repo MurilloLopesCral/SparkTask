@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
@@ -15,6 +15,7 @@
 		Delete02Icon
 	} from '@hugeicons/core-free-icons';
 	import StatusBadge from './status-badge.svelte';
+	import MarkdownToolbar from './markdown-toolbar.svelte';
 	import {
 		TASK_STATUSES,
 		TASK_PRIORITIES,
@@ -52,6 +53,7 @@
 	let saving = $state(false);
 	let uploading = $state(false);
 	let form = $state(toFormState(task));
+	let descriptionEl = $state<HTMLTextAreaElement | null>(null);
 
 	function toFormState(t: VisibleTask) {
 		return {
@@ -205,11 +207,19 @@
 				</Select.Root>
 			</label>
 
-			<label class="flex flex-col gap-xxs">
+			<div class="flex flex-col gap-xxs">
 				<span class="font-sans text-ui-label uppercase">Descrição</span>
-				<textarea class="font-mono text-input" rows="5" bind:value={form.description}></textarea>
+				<div>
+					<MarkdownToolbar bind:value={form.description} bind:textareaEl={descriptionEl} />
+					<textarea
+						bind:this={descriptionEl}
+						class="font-mono text-input border-t-0"
+						rows="5"
+						bind:value={form.description}
+					></textarea>
+				</div>
 				<span class="font-serif text-caption text-muted-foreground">Aceita Markdown.</span>
-			</label>
+			</div>
 
 			<label class="flex flex-col gap-xxs">
 				<span class="font-sans text-ui-label uppercase">Prazo</span>

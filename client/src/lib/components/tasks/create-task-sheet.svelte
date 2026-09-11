@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import * as Sheet from '$lib/components/ui/sheet/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -11,6 +11,7 @@
 		TASK_TYPE_META
 	} from '$lib/tasks/constants';
 	import { createTask } from '$lib/tasks/api';
+	import MarkdownToolbar from './markdown-toolbar.svelte';
 
 	let {
 		projects,
@@ -23,6 +24,7 @@
 	let open = $state(false);
 	let submitting = $state(false);
 	let form = $state(emptyForm());
+	let descriptionEl = $state<HTMLTextAreaElement | null>(null);
 
 	function emptyForm() {
 		return {
@@ -88,10 +90,19 @@
 					<input class="text-input" bind:value={form.title} required />
 				</label>
 
-				<label class="flex flex-col gap-xxs">
+				<div class="flex flex-col gap-xxs">
 					<span class="font-sans text-ui-label uppercase">Descrição</span>
-					<textarea class="text-input" rows="3" bind:value={form.description}></textarea>
-				</label>
+					<div>
+						<MarkdownToolbar bind:value={form.description} bind:textareaEl={descriptionEl} />
+						<textarea
+							bind:this={descriptionEl}
+							class="text-input border-t-0"
+							rows="4"
+							bind:value={form.description}
+						></textarea>
+					</div>
+					<span class="font-serif text-caption text-muted-foreground">Aceita Markdown.</span>
+				</div>
 
 				<label class="flex flex-col gap-xxs">
 					<span class="font-sans text-ui-label uppercase">Projeto</span>

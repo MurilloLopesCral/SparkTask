@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { Card } from '$lib/components/ui/card/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as Avatar from '$lib/components/ui/avatar/index.js';
@@ -145,7 +145,7 @@
 						{task.files.length}
 					</span>
 				{/if}
-				{#if dueDate}
+				{#if dueDate && task.status !== 'done'}
 					<span class="flex items-center gap-xxs font-medium {dueDateClass}">
 						<HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} class="size-3" />
 						{dueDate}
