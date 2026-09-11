@@ -12,6 +12,7 @@
 	import * as Empty from '$lib/components/ui/empty/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { Toggle } from '$lib/components/ui/toggle/index.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { FilterIcon, RefreshIcon } from '@hugeicons/core-free-icons';
 	import TaskTable from '$lib/components/tasks/task-table.svelte';
@@ -43,6 +44,7 @@
 	let ownerFilter = $state(page.url.searchParams.get('owner') ?? 'all');
 	let creatorFilter = $state(page.url.searchParams.get('creator') ?? 'all');
 	let statusFilter = $state(page.url.searchParams.get('status') ?? 'all');
+	let mineOnly = $state(page.url.searchParams.get('mine') === '1');
 	let refreshing = $state(false);
 
 	async function handleRefresh() {
@@ -84,6 +86,11 @@
 		updateUrl({ project: next });
 	}
 
+	function setMineOnly(pressed: boolean) {
+		mineOnly = pressed;
+		updateUrl({ mine: pressed ? '1' : undefined });
+	}
+
 	function clearFilters() {
 		dueFrom = '';
 		dueTo = '';
@@ -109,6 +116,15 @@
 		return [...map.values()];
 	});
 
+	const ownerFilterMembers = $derived(uniqueMembers.filter((m) => m.id !== data.user.id));
+
+	$effect(() => {
+		if (ownerFilter === data.user.id) {
+			ownerFilter = 'all';
+			updateUrl({ owner: undefined });
+		}
+	});
+
 	const activeFilterCount = $derived(
 		[
 			dueFrom,
@@ -123,6 +139,7 @@
 
 	const filteredTasks = $derived(
 		data.tasks.filter((t) => {
+			if (mineOnly && t.ownerId !== data.user.id) return false;
 			if (projectFilter !== 'all' && t.projectId !== projectFilter) return false;
 			if (priorityFilter !== 'all' && t.priority !== priorityFilter) return false;
 			if (typeFilter !== 'all' && t.type !== typeFilter) return false;
@@ -158,7 +175,7 @@
 
 		<div class="flex w-full flex-wrap items-center gap-sm sm:w-auto sm:gap-md">
 			<Select.Root type="single" value={projectFilter} onValueChange={setProjectFilter}>
-				<Select.Trigger class="w-full min-h-11 sm:w-48">{selectedProjectName}</Select.Trigger>
+				<Select.Trigger class="min-h-11 w-full sm:w-48">{selectedProjectName}</Select.Trigger>
 				<Select.Content>
 					<Select.Item value="all" label="Todos os projetos" />
 					{#each data.projects as p (p.id)}
@@ -166,6 +183,16 @@
 					{/each}
 				</Select.Content>
 			</Select.Root>
+
+			<Toggle
+				variant="outline"
+				class="min-h-11"
+				pressed={mineOnly}
+				onPressedChange={setMineOnly}
+				aria-label="Mostrar somente minhas tarefas"
+			>
+				Somente minhas
+			</Toggle>
 
 			<Popover.Root>
 				<Popover.Trigger>
@@ -278,13 +305,13 @@
 									? 'Todos'
 									: ownerFilter === 'unassigned'
 										? 'Sem responsável'
-										: uniqueMembers.find((m) => m.id === ownerFilter)?.name ||
-											uniqueMembers.find((m) => m.id === ownerFilter)?.email}
+										: ownerFilterMembers.find((m) => m.id === ownerFilter)?.name ||
+											ownerFilterMembers.find((m) => m.id === ownerFilter)?.email}
 							</Select.Trigger>
 							<Select.Content>
 								<Select.Item value="all" label="Todos" />
 								<Select.Item value="unassigned" label="Sem responsável" />
-								{#each uniqueMembers as m (m.id)}
+								{#each ownerFilterMembers as m (m.id)}
 									<Select.Item value={m.id} label={m.name || m.email} />
 								{/each}
 							</Select.Content>

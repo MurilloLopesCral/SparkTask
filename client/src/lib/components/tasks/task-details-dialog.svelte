@@ -100,29 +100,85 @@
 		open = false;
 	}
 
+	function validateAttachment(file: File): string | null {
+		const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+		if (!fileUploadConfig.allowedExtensions.includes(extension)) {
+			return `Formato não permitido. Use: ${fileUploadConfig.allowedExtensions.join(', ')}.`;
+		}
+		if (file.size > fileUploadConfig.maxFileSizeBytes) {
+			const maxMb = Math.floor(fileUploadConfig.maxFileSizeBytes / 1024 / 1024);
+			return `Arquivo muito grande. Máximo de ${maxMb}MB.`;
+		}
+		return null;
+	}
+
+	async function attachFiles(files: File[]) {
+		if (files.length === 0 || uploading) return;
+
+		uploading = true;
+		try {
+			for (const file of files) {
+				const error = validateAttachment(file);
+				if (error) {
+					toast.error(error);
+					continue;
+				}
+				await uploadTaskFile(task.id, file);
+			}
+		} finally {
+			uploading = false;
+		}
+	}
+
 	async function handleFileSelect(event: Event) {
 		const input = event.currentTarget as HTMLInputElement;
 		const selected = input.files?.[0];
 		input.value = '';
 		if (!selected) return;
+		await attachFiles([selected]);
+	}
 
-		const extension = selected.name.split('.').pop()?.toLowerCase() ?? '';
-		if (!fileUploadConfig.allowedExtensions.includes(extension)) {
-			toast.error(`Formato não permitido. Use: ${fileUploadConfig.allowedExtensions.join(', ')}.`);
-			return;
-		}
-		if (selected.size > fileUploadConfig.maxFileSizeBytes) {
-			const maxMb = Math.floor(fileUploadConfig.maxFileSizeBytes / 1024 / 1024);
-			toast.error(`Arquivo muito grande. Máximo de ${maxMb}MB.`);
-			return;
-		}
+	function clipboardFiles(data: DataTransfer | null): File[] {
+		if (!data) return [];
+		const listed = Array.from(data.files ?? []);
+		if (listed.length > 0) return listed;
 
-		uploading = true;
-		try {
-			await uploadTaskFile(task.id, selected);
-		} finally {
-			uploading = false;
+		const fromItems: File[] = [];
+		for (const item of Array.from(data.items ?? [])) {
+			if (item.kind !== 'file') continue;
+			const file = item.getAsFile();
+			if (file) fromItems.push(file);
 		}
+		return fromItems;
+	}
+
+	/** Attachment paste only with no field focus, or description focused. */
+	function canPasteAttachment(target: EventTarget | null): boolean {
+		if (!editing) return false;
+
+		const active = document.activeElement;
+		if (descriptionEl && (active === descriptionEl || target === descriptionEl)) return true;
+
+		const focused =
+			active instanceof HTMLElement
+				? active.closest(
+						'input:not([type="file"]), textarea, select, [role="combobox"], [contenteditable="true"]'
+					)
+				: null;
+
+		if (focused && focused !== descriptionEl) return false;
+		return true;
+	}
+
+	function handlePaste(event: ClipboardEvent) {
+		if (!canPasteAttachment(event.target)) return;
+
+		const files = clipboardFiles(event.clipboardData);
+		if (files.length === 0) return;
+
+		// File paste only — never block plain-text paste into the description.
+		event.preventDefault();
+		void attachFiles(files);
 	}
 </script>
 
@@ -130,6 +186,7 @@
 	<AlertDialog.Content
 		interactOutsideBehavior="close"
 		class="max-h-[min(90dvh,100%)] w-[calc(100%-1.5rem)] max-w-[32rem] overflow-y-auto overscroll-contain sm:w-full"
+		onpaste={handlePaste}
 	>
 		<AlertDialog.Header class="flex w-full flex-row items-start justify-between">
 			<div class="flex-1">
@@ -221,7 +278,9 @@
 						bind:value={form.description}
 					></textarea>
 				</div>
-				<span class="font-serif text-caption text-muted-foreground">Aceita Markdown.</span>
+				<span class="font-serif text-caption text-muted-foreground">
+					Aceita Markdown. Ctrl+V (⌘V) cola anexos aqui ou com o diálogo focado.
+				</span>
 			</div>
 
 			<label class="flex flex-col gap-xxs">
@@ -290,7 +349,11 @@
 			</div>
 
 			{#if task.files.length === 0}
-				<p class="font-serif text-caption text-muted-foreground">Nenhum arquivo anexado.</p>
+				<p class="font-serif text-caption text-muted-foreground">
+					Nenhum arquivo anexado.{#if editing}
+						Cole um arquivo com Ctrl+V.
+					{/if}
+				</p>
 			{:else}
 				<ul class="flex flex-col gap-xs">
 					{#each task.files as attachment (attachment.id)}
