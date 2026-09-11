@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -18,7 +18,7 @@
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger>
 				{#snippet child({ props })}
-					<button type="button" class="grid size-6 place-items-center" {...props}>
+					<button type="button" class="grid size-11 place-items-center md:size-6" {...props}>
 						<HugeiconsIcon icon={MoreVerticalIcon} strokeWidth={2} />
 						<span class="sr-only">Ações do projeto</span>
 					</button>

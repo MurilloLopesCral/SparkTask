@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import * as Sheet from '$lib/components/ui/sheet/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -65,7 +65,7 @@
 			</Button>
 		{/snippet}
 	</Sheet.Trigger>
-	<Sheet.Content class="flex flex-col">
+	<Sheet.Content class="flex w-full flex-col sm:max-w-[24rem]">
 		<form onsubmit={handleSubmit} class="flex h-full flex-col">
 			<Sheet.Header>
 				<Sheet.Title>Convidar usuário</Sheet.Title>

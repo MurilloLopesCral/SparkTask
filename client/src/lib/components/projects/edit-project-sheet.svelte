@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import * as Sheet from '$lib/components/ui/sheet/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { updateProject } from '$lib/projects/api';
@@ -33,7 +33,7 @@
 </script>
 
 <Sheet.Root bind:open>
-	<Sheet.Content class="flex flex-col">
+	<Sheet.Content class="flex w-full flex-col sm:max-w-[24rem]">
 		<form onsubmit={handleSubmit} class="flex h-full flex-col">
 			<Sheet.Header>
 				<Sheet.Title>Editar projeto</Sheet.Title>

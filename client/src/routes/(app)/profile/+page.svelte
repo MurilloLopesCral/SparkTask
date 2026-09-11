@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import * as Avatar from '$lib/components/ui/avatar/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -49,17 +49,17 @@
 
 <svelte:head><title>Meu perfil — SparkTask</title></svelte:head>
 
-<div class="mx-auto flex max-w-[32rem] flex-col gap-lg p-lg lg:p-section">
-	<h1 class="font-display text-h1 uppercase">Meu perfil</h1>
+<div class="mx-auto flex max-w-[32rem] flex-col gap-lg p-md pb-[max(1rem,env(safe-area-inset-bottom))] md:p-lg lg:p-section">
+	<h1 class="font-display text-h1 text-pretty uppercase">Meu perfil</h1>
 
-	<div class="flex items-center gap-lg">
-		<div class="relative">
+	<div class="flex items-center gap-md sm:gap-lg">
+		<div class="relative shrink-0">
 			<Avatar.Root size="lg" class="size-20">
 				<Avatar.Image src={data.user.image} alt={data.user.name ?? data.user.email} />
 				<Avatar.Fallback class="text-h3">{initials}</Avatar.Fallback>
 			</Avatar.Root>
 			<label
-				class="btn-secondary absolute -right-1 -bottom-1 grid size-7 place-items-center rounded-full p-0 {uploadingAvatar
+				class="btn-secondary absolute -right-1 -bottom-1 grid size-11 place-items-center rounded-full p-0 sm:size-7 {uploadingAvatar
 					? 'pointer-events-none opacity-40'
 					: ''}"
 			>
@@ -97,7 +97,7 @@
 			</span>
 		</label>
 
-		<Button type="submit" disabled={submitting} class="w-fit">
+		<Button type="submit" disabled={submitting} class="min-h-11 w-full sm:w-fit">
 			{submitting ? 'Salvando…' : 'Salvar alterações'}
 		</Button>
 	</form>

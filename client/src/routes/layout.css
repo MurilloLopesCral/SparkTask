@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+﻿@import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn-svelte/tailwind.css';
 
@@ -323,17 +323,35 @@
 	   marketing site's hard instant-invert. */
 
 	.app-nav {
-		@apply sticky top-0 z-50 flex h-14 items-center justify-between gap-lg bg-frame px-lg;
+		@apply sticky top-0 z-50 flex h-14 items-center justify-between gap-lg bg-frame px-md md:px-lg;
+		padding-top: env(safe-area-inset-top);
+		padding-left: max(0.75rem, env(safe-area-inset-left));
+		padding-right: max(0.75rem, env(safe-area-inset-right));
+		min-height: calc(3.5rem + env(safe-area-inset-top));
 	}
 	.app-nav a {
 		@apply no-underline;
 	}
 
 	.app-nav-icon {
-		@apply grid size-10 place-items-center text-canvas transition-colors hover:bg-canvas/10;
+		@apply grid size-11 place-items-center text-canvas transition-colors duration-150 hover:bg-canvas/10 focus-visible:bg-canvas/10 focus-visible:outline-none md:size-10;
 	}
 	.app-nav-icon[aria-current='page'] {
 		@apply bg-canvas text-ink;
+	}
+
+	.mobile-nav-link {
+		@apply flex min-h-11 cursor-pointer items-center gap-md px-md py-sm font-sans text-ui-label text-ink uppercase transition-colors duration-150 hover:bg-muted focus-visible:bg-muted focus-visible:outline-none;
+	}
+	.mobile-nav-link[aria-current='page'] {
+		@apply bg-frame text-canvas;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.app-nav-icon,
+		.mobile-nav-link {
+			transition: none;
+		}
 	}
 
 	.kanban-column {

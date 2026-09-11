@@ -127,7 +127,10 @@
 </script>
 
 <AlertDialog.Root bind:open>
-	<AlertDialog.Content interactOutsideBehavior="close" class="max-w-[32rem]">
+	<AlertDialog.Content
+		interactOutsideBehavior="close"
+		class="max-h-[min(90dvh,100%)] w-[calc(100%-1.5rem)] max-w-[32rem] overflow-y-auto overscroll-contain sm:w-full"
+	>
 		<AlertDialog.Header class="flex w-full flex-row items-start justify-between">
 			<div class="flex-1">
 				{#if editing}

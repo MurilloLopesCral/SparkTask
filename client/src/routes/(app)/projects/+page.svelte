@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import * as Empty from '$lib/components/ui/empty/index.js';
 	import CreateProjectSheet from '$lib/components/projects/create-project-sheet.svelte';
 	import ProjectCard from '$lib/components/projects/project-card.svelte';
@@ -9,9 +9,11 @@
 
 <svelte:head><title>Projetos — SparkTask</title></svelte:head>
 
-<div class="p-lg lg:p-section">
-	<div class="mb-lg flex flex-wrap items-center justify-between gap-md">
-		<h1 class="font-display text-h1 uppercase">Projetos</h1>
+<div class="p-md pb-[max(1rem,env(safe-area-inset-bottom))] md:p-lg lg:p-section">
+	<div
+		class="mb-lg flex flex-col gap-md sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+	>
+		<h1 class="font-display text-h1 text-pretty uppercase">Projetos</h1>
 		<CreateProjectSheet groups={data.groups} />
 	</div>
 

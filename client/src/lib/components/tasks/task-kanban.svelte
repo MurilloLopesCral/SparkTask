@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { SvelteMap } from 'svelte/reactivity';
 	import * as ScrollArea from '$lib/components/ui/scroll-area/index.js';
 	import TaskCard from './task-card.svelte';
@@ -83,6 +83,7 @@
 							{task}
 							{groupMembers}
 							{fileUploadConfig}
+							draggable
 							ondragstart={(taskId) => (draggedTaskId = taskId)}
 							ondragend={() => {
 								draggedTaskId = null;

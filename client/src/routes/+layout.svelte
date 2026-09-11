@@ -1,14 +1,29 @@
-<script lang="ts">
+﻿<script lang="ts">
+	import { onMount } from 'svelte';
 	import './layout.css';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { Toaster } from 'svelte-sonner';
+	import { pwaInfo } from 'virtual:pwa-info';
 
 	let { children } = $props();
+
+	const webManifest = $derived(pwaInfo ? pwaInfo.webManifest.linkTag : '');
+
+	onMount(async () => {
+		if (!pwaInfo) return;
+		const { registerSW } = await import('virtual:pwa-register');
+		registerSW({ immediate: true });
+	});
 </script>
 
 <svelte:head>
-	<link rel="icon" href="/sparktask.ico" type="image/x-icon" />
+	<link rel="icon" href="/assets/sparktask.ico" type="image/x-icon" />
+	<link rel="apple-touch-icon" href="/assets/sparktask_180.png" />
+	{#if webManifest}
+		{@html webManifest}
+	{/if}
 </svelte:head>
+
 <Tooltip.Provider>
 	{@render children()}
 </Tooltip.Provider>

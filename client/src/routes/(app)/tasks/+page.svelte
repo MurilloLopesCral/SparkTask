@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { page } from '$app/state';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -16,12 +16,15 @@
 	import { FilterIcon, RefreshIcon } from '@hugeicons/core-free-icons';
 	import TaskTable from '$lib/components/tasks/task-table.svelte';
 	import TaskKanban from '$lib/components/tasks/task-kanban.svelte';
+	import TaskList from '$lib/components/tasks/task-list.svelte';
 	import CreateTaskSheet from '$lib/components/tasks/create-task-sheet.svelte';
 	import { TASK_STATUSES, TASK_PRIORITIES, TASK_TYPES } from '$lib/tasks/constants';
+	import { IsMobile } from '$lib/hooks/is-mobile.svelte.js';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
+	const isMobile = new IsMobile();
 	const VIEW_STORAGE_KEY = 'sparktask:tasks-view';
 
 	function initialView() {
@@ -114,7 +117,7 @@
 			typeFilter !== 'all',
 			ownerFilter !== 'all',
 			creatorFilter !== 'all',
-			view === 'table' && statusFilter !== 'all'
+			(isMobile.current || view === 'table') && statusFilter !== 'all'
 		].filter(Boolean).length
 	);
 
@@ -127,7 +130,12 @@
 			if (ownerFilter !== 'all' && ownerFilter !== 'unassigned' && t.ownerId !== ownerFilter)
 				return false;
 			if (creatorFilter !== 'all' && t.createdBy !== creatorFilter) return false;
-			if (view === 'table' && statusFilter !== 'all' && t.status !== statusFilter) return false;
+			if (
+				(isMobile.current || view === 'table') &&
+				statusFilter !== 'all' &&
+				t.status !== statusFilter
+			)
+				return false;
 			if (dueFrom && (!t.dueDate || t.dueDate < dueFrom)) return false;
 			if (dueTo && (!t.dueDate || t.dueDate > dueTo)) return false;
 			return true;
@@ -141,16 +149,16 @@
 <svelte:head><title>Tarefas — SparkTask</title></svelte:head>
 
 <div
-	class={view === 'kanban'
-		? 'flex h-[calc(100dvh-3.5rem)] flex-col p-lg lg:p-section'
-		: 'p-lg lg:p-section'}
+	class={view === 'kanban' && !isMobile.current
+		? 'flex h-[calc(100dvh-3.5rem-env(safe-area-inset-top))] flex-col p-md pb-[max(1rem,env(safe-area-inset-bottom))] md:p-lg lg:p-section'
+		: 'p-md pb-[max(1rem,env(safe-area-inset-bottom))] md:p-lg lg:p-section'}
 >
-	<div class="mb-lg flex flex-wrap items-center justify-between gap-md">
-		<h1 class="font-display text-h1 uppercase">Tarefas</h1>
+	<div class="mb-lg flex flex-col gap-md sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+		<h1 class="font-display text-h1 text-pretty uppercase">Tarefas</h1>
 
-		<div class="flex flex-wrap items-center gap-md">
+		<div class="flex w-full flex-wrap items-center gap-sm sm:w-auto sm:gap-md">
 			<Select.Root type="single" value={projectFilter} onValueChange={setProjectFilter}>
-				<Select.Trigger class="w-48">{selectedProjectName}</Select.Trigger>
+				<Select.Trigger class="w-full min-h-11 sm:w-48">{selectedProjectName}</Select.Trigger>
 				<Select.Content>
 					<Select.Item value="all" label="Todos os projetos" />
 					{#each data.projects as p (p.id)}
@@ -171,7 +179,10 @@
 						</Button>
 					{/snippet}
 				</Popover.Trigger>
-				<Popover.Content class="flex w-80 flex-col gap-md" align="end">
+				<Popover.Content
+					class="flex w-[min(calc(100vw-2rem),20rem)] flex-col gap-md"
+					align="end"
+				>
 					<div class="flex items-center justify-between">
 						<span class="font-sans text-ui-label uppercase">Filtros</span>
 						<button
@@ -305,7 +316,7 @@
 						</Select.Root>
 					</label>
 
-					{#if view === 'table'}
+					{#if isMobile.current || view === 'table'}
 						<label class="flex flex-col gap-xxs">
 							<span class="font-sans text-ui-label uppercase">Status</span>
 							<Select.Root
@@ -340,6 +351,7 @@
 							{...props}
 							variant="outline"
 							size="icon"
+							class="min-h-11 min-w-11"
 							disabled={refreshing}
 							onclick={handleRefresh}
 						>
@@ -355,12 +367,14 @@
 				<Tooltip.Content>Atualizar tarefas</Tooltip.Content>
 			</Tooltip.Root>
 
-			<Tabs.Root value={view} onValueChange={setView}>
-				<Tabs.List>
-					<Tabs.Trigger value="table">Tabela</Tabs.Trigger>
-					<Tabs.Trigger value="kanban">Kanban</Tabs.Trigger>
-				</Tabs.List>
-			</Tabs.Root>
+			<div class="hidden md:block">
+				<Tabs.Root value={view} onValueChange={setView}>
+					<Tabs.List>
+						<Tabs.Trigger value="table">Tabela</Tabs.Trigger>
+						<Tabs.Trigger value="kanban">Kanban</Tabs.Trigger>
+					</Tabs.List>
+				</Tabs.Root>
+			</div>
 
 			<CreateTaskSheet projects={data.projects} groupMembers={data.groupMembers} />
 		</div>
@@ -383,6 +397,12 @@
 				<Empty.Description>Ajuste os filtros para ver outras tarefas.</Empty.Description>
 			</Empty.Header>
 		</Empty.Root>
+	{:else if isMobile.current}
+		<TaskList
+			tasks={filteredTasks}
+			groupMembers={data.groupMembers}
+			fileUploadConfig={data.fileUploadConfig}
+		/>
 	{:else if view === 'kanban'}
 		<div class="min-h-0 flex-1">
 			<TaskKanban

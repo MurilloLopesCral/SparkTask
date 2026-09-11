@@ -28,13 +28,15 @@
 		groupMembers,
 		fileUploadConfig,
 		ondragstart,
-		ondragend
+		ondragend,
+		draggable = false
 	}: {
 		task: VisibleTask;
 		groupMembers: { groupId: string; id: string; name: string | null; email: string }[];
 		fileUploadConfig: FileUploadConfig;
-		ondragstart: (taskId: string) => void;
-		ondragend: () => void;
+		ondragstart?: (taskId: string) => void;
+		ondragend?: () => void;
+		draggable?: boolean;
 	} = $props();
 
 	let detailsOpen = $state(false);
@@ -58,26 +60,32 @@
 
 <div class="relative">
 	<Card
-		draggable={true}
-		ondragstart={() => ondragstart(task.id)}
-		ondragend={() => ondragend()}
+		draggable={draggable}
+		ondragstart={draggable ? () => ondragstart?.(task.id) : undefined}
+		ondragend={draggable ? () => ondragend?.() : undefined}
 		onclick={openDetails}
-		class="task-card group/task-card cursor-grab gap-sm p-md active:cursor-grabbing"
+		class="task-card group/task-card gap-sm p-md {draggable
+			? 'cursor-grab active:cursor-grabbing'
+			: 'cursor-pointer'}"
 	>
 		<Badge variant="outline" class="badge-sticker w-fit">{task.project.name}</Badge>
 
 		<div class="flex items-start justify-between gap-sm">
-			<p class="flex-1 font-sans text-h3 uppercase">{task.title}</p>
+			<p class="min-w-0 flex-1 font-sans text-h3 uppercase text-pretty">{task.title}</p>
 
 			<div
 				role="presentation"
 				onclick={(e) => e.stopPropagation()}
-				class="opacity-0 transition-opacity group-focus-within/task-card:opacity-100 group-hover/task-card:opacity-100"
+				class="opacity-100 transition-opacity md:opacity-0 md:group-focus-within/task-card:opacity-100 md:group-hover/task-card:opacity-100"
 			>
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger>
 						{#snippet child({ props })}
-							<button type="button" class="grid size-6 place-items-center" {...props}>
+							<button
+								type="button"
+								class="grid size-11 place-items-center md:size-6"
+								{...props}
+							>
 								<HugeiconsIcon icon={MoreVerticalIcon} strokeWidth={2} />
 								<span class="sr-only">Ações da tarefa</span>
 							</button>

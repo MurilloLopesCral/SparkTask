@@ -77,7 +77,7 @@
 			</Button>
 		{/snippet}
 	</Sheet.Trigger>
-	<Sheet.Content class="flex flex-col">
+	<Sheet.Content class="flex w-full flex-col sm:max-w-[24rem]">
 		<form onsubmit={handleSubmit} class="flex h-full flex-col">
 			<Sheet.Header>
 				<Sheet.Title>Nova tarefa</Sheet.Title>
