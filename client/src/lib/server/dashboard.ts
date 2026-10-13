@@ -89,6 +89,19 @@ function lastMonthKeys(countMonths: number, now = new Date()) {
 	return keys;
 }
 
+/** Calendar days from the 1st through today — for the “mês atual” daily series. */
+function currentMonthDayKeys(now = new Date()) {
+	const days: { key: string; label: string }[] = [];
+	for (let day = 1; day <= now.getDate(); day++) {
+		const d = new Date(now.getFullYear(), now.getMonth(), day);
+		days.push({
+			key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+			label: String(day)
+		});
+	}
+	return days;
+}
+
 export async function getHomeDashboard(userId: string) {
 	const projects = await getVisibleProjects(userId);
 	const projectIds = projects.map((p) => p.id);
@@ -108,7 +121,9 @@ export async function getHomeDashboard(userId: string) {
 		weekDays[4].getDate() + 1
 	);
 	const historyStart = monthsBackLocal(6, now);
+	const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 	const monthBuckets = lastMonthKeys(6, now);
+	const currentMonthDays = currentMonthDayKeys(now);
 
 	const [
 		pendingRow,
@@ -116,7 +131,9 @@ export async function getHomeDashboard(userId: string) {
 		totalRow,
 		memberRows,
 		weekDoneRows,
-		monthlyRows
+		monthlyRows,
+		tasksByProjectRows,
+		currentMonthDailyRows
 	] = await Promise.all([
 		db
 			.select({ value: count() })
@@ -180,7 +197,31 @@ export async function getHomeDashboard(userId: string) {
 					gte(task.updatedAt, historyStart)
 				)
 			)
-			.groupBy(monthBucket, task.projectId)
+			.groupBy(monthBucket, task.projectId),
+		db
+			.select({
+				projectId: task.projectId,
+				value: count()
+			})
+			.from(task)
+			.where(inArray(task.projectId, projectIds))
+			.groupBy(task.projectId),
+		db
+			.select({
+				dayKey: dayBucket,
+				projectId: task.projectId,
+				value: count()
+			})
+			.from(task)
+			.where(
+				and(
+					inArray(task.projectId, projectIds),
+					eq(task.status, 'done'),
+					gte(task.updatedAt, monthStart),
+					lt(task.updatedAt, nextMonthStart)
+				)
+			)
+			.groupBy(dayBucket, task.projectId)
 	]);
 
 	const pendingTasks = Number(pendingRow?.value ?? 0);
@@ -210,6 +251,22 @@ export async function getHomeDashboard(userId: string) {
 		count: Number(r.value)
 	}));
 
+	const currentMonthDailyByProject = currentMonthDailyRows.map((r) => ({
+		dayKey: r.dayKey,
+		projectId: r.projectId,
+		count: Number(r.value)
+	}));
+
+	const countByProject = new Map(
+		tasksByProjectRows.map((r) => [r.projectId, Number(r.value)])
+	);
+	const tasksByProject = projects
+		.map((p) => ({
+			project: p.name,
+			tasks: countByProject.get(p.id) ?? 0
+		}))
+		.sort((a, b) => b.tasks - a.tasks);
+
 	return {
 		userStats: {
 			pendingTasks,
@@ -222,7 +279,10 @@ export async function getHomeDashboard(userId: string) {
 			totalTasks,
 			memberCount,
 			months: monthBuckets,
+			currentMonthDays,
 			monthlyByProject,
+			currentMonthDailyByProject,
+			tasksByProject,
 			projects: projects.map((p) => ({ id: p.id, name: p.name }))
 		}
 	};
@@ -247,7 +307,14 @@ function emptyDashboard(projects: { id: string; name: string; groupId: string }[
 			totalTasks: 0,
 			memberCount: 0,
 			months: lastMonthKeys(6, now),
+			currentMonthDays: currentMonthDayKeys(now),
 			monthlyByProject: [] as { monthKey: string; projectId: string; count: number }[],
+			currentMonthDailyByProject: [] as {
+				dayKey: string;
+				projectId: string;
+				count: number;
+			}[],
+			tasksByProject: [] as { project: string; tasks: number }[],
 			projects: projects.map((p) => ({ id: p.id, name: p.name }))
 		}
 	};

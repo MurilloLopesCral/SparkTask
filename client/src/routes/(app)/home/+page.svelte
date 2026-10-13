@@ -2,6 +2,7 @@
 	import StatCard from '$lib/components/home/stat-card.svelte';
 	import WeekProgressChart from '$lib/components/home/week-progress-chart.svelte';
 	import MonthlyEvolutionChart from '$lib/components/home/monthly-evolution-chart.svelte';
+	import TasksByProjectChart from '$lib/components/home/tasks-by-project-chart.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -86,9 +87,13 @@
 			/>
 		</div>
 
+		<TasksByProjectChart data={groupStats.tasksByProject} />
+
 		<MonthlyEvolutionChart
 			months={groupStats.months}
+			currentMonthDays={groupStats.currentMonthDays}
 			monthlyByProject={groupStats.monthlyByProject}
+			currentMonthDailyByProject={groupStats.currentMonthDailyByProject}
 			projects={groupStats.projects}
 		/>
 	</section>

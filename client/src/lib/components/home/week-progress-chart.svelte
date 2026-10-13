@@ -1,5 +1,5 @@
 ﻿<script lang="ts">
-	import { BarChart } from 'layerchart';
+	import { LineChart } from 'layerchart';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Chart from '$lib/components/ui/chart/index.js';
 
@@ -16,7 +16,16 @@
 		}
 	} satisfies Chart.ChartConfig;
 
-	const total = $derived(data.reduce((sum, d) => sum + d.completed, 0));
+	/** Cumulative through the work week — the line climbs as tasks land. */
+	const chartData = $derived.by(() => {
+		let running = 0;
+		return data.map((d) => {
+			running += d.completed;
+			return { day: d.day, completed: running };
+		});
+	});
+
+	const total = $derived(chartData.at(-1)?.completed ?? 0);
 </script>
 
 <Card.Root
@@ -37,14 +46,12 @@
 	<Card.Content class="chart-mesh p-md">
 		<Chart.Container
 			config={chartConfig}
-			class="aspect-auto h-52 w-full [&_.lc-bars-rect]:stroke-frame [&_.lc-grid-x-line]:stroke-frame/25 [&_.lc-grid-y-line]:stroke-frame/25"
+			class="aspect-auto h-52 w-full [&_.lc-grid-x-line]:stroke-frame/25 [&_.lc-grid-y-line]:stroke-frame/25 [&_.lc-highlight-point]:fill-[var(--chart-1)] [&_.lc-spline-path]:stroke-[var(--chart-1)]"
 		>
-			<BarChart
-				{data}
+			<LineChart
+				data={chartData}
 				x="day"
-				bandPadding={0.28}
 				axis="x"
-				seriesLayout="group"
 				series={[
 					{
 						key: 'completed',
@@ -56,7 +63,7 @@
 				{#snippet tooltip()}
 					<Chart.Tooltip labelKey="day" indicator="line" />
 				{/snippet}
-			</BarChart>
+			</LineChart>
 		</Chart.Container>
 	</Card.Content>
 </Card.Root>
