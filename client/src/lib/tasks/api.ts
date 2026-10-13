@@ -1,4 +1,4 @@
-import { invalidateAll } from '$app/navigation';
+﻿import { invalidateAll } from '$app/navigation';
 import { toast } from 'svelte-sonner';
 import { celebration } from './celebration.svelte';
 import type { TaskStatus } from './constants';
@@ -21,7 +21,9 @@ async function patchTask(taskId: string, fields: Record<string, unknown>) {
 }
 
 export async function setTaskStatus(taskId: string, status: TaskStatus) {
-	if (await patchTask(taskId, { status })) toast.success('Status atualizado.');
+	const ok = await patchTask(taskId, { status });
+	if (ok) toast.success('Status atualizado.');
+	return ok;
 }
 
 export async function removeTask(taskId: string) {
@@ -43,6 +45,7 @@ export interface TaskFormValues {
 	type: string;
 	dueDate: string;
 	ownerId: string;
+	projectId: string;
 }
 
 export async function saveTask(taskId: string, values: TaskFormValues) {
@@ -53,7 +56,8 @@ export async function saveTask(taskId: string, values: TaskFormValues) {
 		priority: values.priority,
 		type: values.type,
 		dueDate: values.dueDate || null,
-		ownerId: values.ownerId || null
+		ownerId: values.ownerId || null,
+		projectId: values.projectId
 	});
 	if (ok) toast.success('Tarefa atualizada.');
 	return ok;

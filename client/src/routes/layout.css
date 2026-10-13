@@ -362,6 +362,15 @@
 		@apply grid h-16 place-items-center border-2 border-dashed border-frame/40 font-sans text-ui-label text-muted-foreground uppercase;
 	}
 
+	/* Graph-paper mesh behind LayerChart plots — catalog notebook vibe. */
+	.chart-mesh {
+		background-color: var(--canvas);
+		background-image:
+			linear-gradient(to right, color-mix(in srgb, var(--frame) 12%, transparent) 1px, transparent 1px),
+			linear-gradient(to bottom, color-mix(in srgb, var(--frame) 12%, transparent) 1px, transparent 1px);
+		background-size: 14px 14px;
+	}
+
 	/* Rendered task-description markdown — shared by the full dialog view and
 	   the truncated card/kanban preview. Plain descendant selectors, not
 	   Svelte's `:global()` — this file is already unscoped global CSS. */

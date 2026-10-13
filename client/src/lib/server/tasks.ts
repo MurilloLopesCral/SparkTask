@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, ilike, inArray, lte, type SQL } from 'drizzle-orm';
+﻿import { and, desc, eq, gte, ilike, inArray, lte, type SQL } from 'drizzle-orm';
 import { db } from './db';
 import {
 	groupMember,
@@ -130,13 +130,18 @@ export async function userCanAccessTask(userId: string, taskId: string) {
 }
 
 export async function getTaskProjectId(taskId: string) {
+	const row = await getTaskProjectAndOwner(taskId);
+	return row?.projectId;
+}
+
+export async function getTaskProjectAndOwner(taskId: string) {
 	const [row] = await db
-		.select({ projectId: task.projectId })
+		.select({ projectId: task.projectId, ownerId: task.ownerId })
 		.from(task)
 		.where(eq(task.id, taskId))
 		.limit(1);
 
-	return row?.projectId;
+	return row;
 }
 
 /** Guards task creation — the target project must belong to one of the caller's groups. */
@@ -178,6 +183,7 @@ export interface TaskUpdateFields {
 	type?: (typeof taskTypeEnum.enumValues)[number];
 	dueDate?: string | null;
 	ownerId?: string | null;
+	projectId?: string;
 }
 
 export async function updateTaskFields(taskId: string, fields: TaskUpdateFields) {

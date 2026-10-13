@@ -25,6 +25,7 @@
 
 	let {
 		task,
+		projects,
 		groupMembers,
 		fileUploadConfig,
 		ondragstart,
@@ -32,6 +33,7 @@
 		draggable = false
 	}: {
 		task: VisibleTask;
+		projects: { id: string; name: string; groupId: string }[];
 		groupMembers: { groupId: string; id: string; name: string | null; email: string }[];
 		fileUploadConfig: FileUploadConfig;
 		ondragstart?: (taskId: string) => void;
@@ -65,7 +67,7 @@
 		ondragend={draggable ? () => ondragend?.() : undefined}
 		onclick={openDetails}
 		class="task-card group/task-card gap-sm p-md {draggable
-			? 'cursor-grab active:cursor-grabbing'
+			? 'cursor-grab transition-[transform,box-shadow] duration-150 hover:z-10 hover:scale-[1.02] hover:shadow-[4px_4px_0_var(--frame)] active:cursor-grabbing active:scale-100 active:shadow-none'
 			: 'cursor-pointer'}"
 	>
 		<Badge variant="outline" class="badge-sticker w-fit">{task.project.name}</Badge>
@@ -167,6 +169,7 @@
 
 <TaskDetailsDialog
 	{task}
+	{projects}
 	{groupMembers}
 	{fileUploadConfig}
 	bind:open={detailsOpen}

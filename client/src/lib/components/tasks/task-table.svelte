@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
@@ -24,10 +24,12 @@
 
 	let {
 		tasks,
+		projects,
 		groupMembers,
 		fileUploadConfig
 	}: {
 		tasks: VisibleTask[];
+		projects: { id: string; name: string; groupId: string }[];
 		groupMembers: { groupId: string; id: string; name: string | null; email: string }[];
 		fileUploadConfig: FileUploadConfig;
 	} = $props();
@@ -162,6 +164,7 @@
 {#if dialogTask}
 	<TaskDetailsDialog
 		task={dialogTask}
+		{projects}
 		{groupMembers}
 		{fileUploadConfig}
 		bind:open={dialogOpen}

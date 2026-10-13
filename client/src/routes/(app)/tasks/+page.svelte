@@ -427,6 +427,7 @@
 	{:else if isMobile.current}
 		<TaskList
 			tasks={filteredTasks}
+			projects={data.projects}
 			groupMembers={data.groupMembers}
 			fileUploadConfig={data.fileUploadConfig}
 		/>
@@ -434,6 +435,7 @@
 		<div class="min-h-0 flex-1">
 			<TaskKanban
 				tasks={filteredTasks}
+				projects={data.projects}
 				groupMembers={data.groupMembers}
 				fileUploadConfig={data.fileUploadConfig}
 			/>
@@ -441,6 +443,7 @@
 	{:else}
 		<TaskTable
 			tasks={filteredTasks}
+			projects={data.projects}
 			groupMembers={data.groupMembers}
 			fileUploadConfig={data.fileUploadConfig}
 		/>

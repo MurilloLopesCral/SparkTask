@@ -1,10 +1,11 @@
-import { error, json } from '@sveltejs/kit';
+﻿import { error, json } from '@sveltejs/kit';
 import { z } from 'zod';
 import { taskPriorityEnum, taskStatusEnum, taskTypeEnum } from '$lib/server/db/schema';
 import {
 	deleteTaskById,
-	getTaskProjectId,
+	getTaskProjectAndOwner,
 	updateTaskFields,
+	userCanAccessProject,
 	userCanAccessTask,
 	userIsMemberOfProjectGroup
 } from '$lib/server/tasks';
@@ -18,7 +19,8 @@ const patchTaskSchema = z
 		priority: z.enum(taskPriorityEnum.enumValues),
 		type: z.enum(taskTypeEnum.enumValues),
 		dueDate: z.string().nullable(),
-		ownerId: z.string().uuid().nullable()
+		ownerId: z.string().uuid().nullable(),
+		projectId: z.string().uuid()
 	})
 	.partial();
 
@@ -36,14 +38,33 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 		return json({ message: 'Nada para atualizar.' }, { status: 400 });
 	}
 
-	if (parsed.data.ownerId) {
-		const projectId = await getTaskProjectId(params.id);
-		if (!projectId || !(await userIsMemberOfProjectGroup(parsed.data.ownerId, projectId))) {
-			return json({ message: 'O responsável não pertence ao grupo do projeto.' }, { status: 400 });
+	const current = await getTaskProjectAndOwner(params.id);
+	if (!current) error(404, 'Tarefa não encontrada.');
+
+	const fields = { ...parsed.data };
+
+	if (fields.projectId && !(await userCanAccessProject(locals.user.id, fields.projectId))) {
+		return json({ message: 'Você não tem acesso a este projeto.' }, { status: 403 });
+	}
+
+	const targetProjectId = fields.projectId ?? current.projectId;
+	const targetOwnerId = fields.ownerId !== undefined ? fields.ownerId : current.ownerId;
+
+	if (targetOwnerId) {
+		const ownerOk = await userIsMemberOfProjectGroup(targetOwnerId, targetProjectId);
+		if (!ownerOk) {
+			if (fields.ownerId !== undefined) {
+				return json(
+					{ message: 'O responsável não pertence ao grupo do projeto.' },
+					{ status: 400 }
+				);
+			}
+			// Project moved; drop an owner that no longer belongs to the new group.
+			fields.ownerId = null;
 		}
 	}
 
-	await updateTaskFields(params.id, parsed.data);
+	await updateTaskFields(params.id, fields);
 	return json({ success: true });
 };
 

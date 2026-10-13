@@ -1,4 +1,4 @@
-export function formatFileSize(bytes: number) {
+﻿export function formatFileSize(bytes: number) {
 	if (bytes < 1024) return `${bytes} B`;
 	const units = ['KB', 'MB', 'GB'];
 	let value = bytes / 1024;
@@ -12,23 +12,32 @@ export function formatFileSize(bytes: number) {
 
 const dateFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' });
 
+/** Date-only ISO (`YYYY-MM-DD`) is UTC midnight in `new Date()` — west of UTC that becomes the previous local day. */
+function toLocalDate(value: string | Date) {
+	if (value instanceof Date) {
+		return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+	}
+	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+	if (match) {
+		return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+	}
+	const parsed = new Date(value);
+	return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+}
+
 export function formatDate(value: string | Date | null | undefined) {
 	if (!value) return null;
-	return dateFormatter.format(new Date(value));
+	return dateFormatter.format(toLocalDate(value));
 }
 
 export type DueDateStatus = 'overdue' | 'urgent' | 'ok';
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
-function startOfDay(date: Date) {
-	return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
 export function getDueDateStatus(value: string | Date | null | undefined): DueDateStatus | null {
 	if (!value) return null;
 	const daysLeft = Math.round(
-		(startOfDay(new Date(value)).getTime() - startOfDay(new Date()).getTime()) / MS_PER_DAY
+		(toLocalDate(value).getTime() - toLocalDate(new Date()).getTime()) / MS_PER_DAY
 	);
 	if (daysLeft < 0) return 'overdue';
 	if (daysLeft <= 10) return 'urgent';

@@ -37,12 +37,14 @@
 
 	let {
 		task,
+		projects,
 		groupMembers,
 		fileUploadConfig,
 		open = $bindable(false),
 		initialEditing = false
 	}: {
 		task: VisibleTask;
+		projects: { id: string; name: string; groupId: string }[];
 		groupMembers: { groupId: string; id: string; name: string | null; email: string }[];
 		fileUploadConfig: FileUploadConfig;
 		open?: boolean;
@@ -63,11 +65,20 @@
 			priority: t.priority as string,
 			type: t.type as string,
 			dueDate: t.dueDate ?? '',
-			ownerId: t.ownerId ?? ''
+			ownerId: t.ownerId ?? '',
+			projectId: t.projectId
 		};
 	}
 
-	const availableOwners = $derived(groupMembers.filter((m) => m.groupId === task.project.groupId));
+	const selectedProject = $derived(projects.find((p) => p.id === form.projectId));
+	const availableOwners = $derived(
+		groupMembers.filter((m) => m.groupId === selectedProject?.groupId)
+	);
+	const projectLabel = $derived(
+		editing
+			? (selectedProject?.name ?? task.project.name)
+			: task.project.name
+	);
 	const ownerName = $derived(task.owner?.name || task.owner?.email || 'Sem responsável');
 	const creatorName = $derived(task.creator.name || task.creator.email);
 
@@ -78,6 +89,14 @@
 		if (open) {
 			form = toFormState(task);
 			editing = initialEditing;
+		}
+	});
+
+	// Selecting a project the current owner doesn't belong to would silently
+	// send a stale ownerId — reset it whenever the pool of valid owners changes.
+	$effect(() => {
+		if (form.ownerId && !availableOwners.some((m) => m.id === form.ownerId)) {
+			form.ownerId = '';
 		}
 	});
 
@@ -199,7 +218,7 @@
 				{:else}
 					<AlertDialog.Title>{task.title}</AlertDialog.Title>
 				{/if}
-				<AlertDialog.Description>{task.project.name}</AlertDialog.Description>
+				<AlertDialog.Description>{projectLabel}</AlertDialog.Description>
 			</div>
 			{#if !editing}
 				<button
@@ -249,6 +268,20 @@
 					</Select.Content>
 				</Select.Root>
 			</div>
+
+			<label class="flex flex-col gap-xxs">
+				<span class="font-sans text-ui-label uppercase">Projeto</span>
+				<Select.Root type="single" bind:value={form.projectId}>
+					<Select.Trigger class="w-full">
+						{selectedProject?.name ?? 'Selecione um projeto'}
+					</Select.Trigger>
+					<Select.Content>
+						{#each projects as p (p.id)}
+							<Select.Item value={p.id} label={p.name} />
+						{/each}
+					</Select.Content>
+				</Select.Root>
+			</label>
 
 			<label class="flex flex-col gap-xxs">
 				<span class="font-sans text-ui-label uppercase">Responsável</span>

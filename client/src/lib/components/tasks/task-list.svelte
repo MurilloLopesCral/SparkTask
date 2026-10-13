@@ -5,10 +5,12 @@
 
 	let {
 		tasks,
+		projects,
 		groupMembers,
 		fileUploadConfig
 	}: {
 		tasks: VisibleTask[];
+		projects: { id: string; name: string; groupId: string }[];
 		groupMembers: { groupId: string; id: string; name: string | null; email: string }[];
 		fileUploadConfig: FileUploadConfig;
 	} = $props();
@@ -17,7 +19,7 @@
 <ul class="flex flex-col gap-md">
 	{#each tasks as task (task.id)}
 		<li>
-			<TaskCard {task} {groupMembers} {fileUploadConfig} />
+			<TaskCard {task} {projects} {groupMembers} {fileUploadConfig} />
 		</li>
 	{/each}
 </ul>
