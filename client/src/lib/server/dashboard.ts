@@ -1,9 +1,12 @@
-﻿import { and, count, eq, gte, inArray, sql } from 'drizzle-orm';
+﻿import { and, count, eq, gte, inArray, lt, sql } from 'drizzle-orm';
 import { db } from './db';
 import { groupMember, project, task } from './db/schema';
 
 const PENDING_STATUSES = ['not_started', 'in_progress', 'stand_by'] as const;
-const TZ = 'America/Sao_Paulo';
+/** Literal — keeps SELECT/GROUP BY identical (bound params get distinct $N and break GROUP BY). */
+const TZ_SQL = sql.raw("'America/Sao_Paulo'");
+const dayBucket = sql<string>`to_char((${task.updatedAt} AT TIME ZONE ${TZ_SQL}), 'YYYY-MM-DD')`;
+const monthBucket = sql<string>`to_char((${task.updatedAt} AT TIME ZONE ${TZ_SQL}), 'YYYY-MM')`;
 
 const WEEKDAY_LABELS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'] as const;
 const MONTH_LABELS = [
@@ -149,7 +152,7 @@ export async function getHomeDashboard(userId: string) {
 			.where(inArray(groupMember.groupId, groupIds)),
 		db
 			.select({
-				dayKey: sql<string>`to_char((${task.updatedAt} AT TIME ZONE ${TZ}), 'YYYY-MM-DD')`,
+				dayKey: dayBucket,
 				value: count()
 			})
 			.from(task)
@@ -159,13 +162,13 @@ export async function getHomeDashboard(userId: string) {
 					eq(task.ownerId, userId),
 					eq(task.status, 'done'),
 					gte(task.updatedAt, weekStart),
-					sql`${task.updatedAt} < ${weekEnd}`
+					lt(task.updatedAt, weekEnd)
 				)
 			)
-			.groupBy(sql`to_char((${task.updatedAt} AT TIME ZONE ${TZ}), 'YYYY-MM-DD')`),
+			.groupBy(dayBucket),
 		db
 			.select({
-				monthKey: sql<string>`to_char((${task.updatedAt} AT TIME ZONE ${TZ}), 'YYYY-MM')`,
+				monthKey: monthBucket,
 				projectId: task.projectId,
 				value: count()
 			})
@@ -177,10 +180,7 @@ export async function getHomeDashboard(userId: string) {
 					gte(task.updatedAt, historyStart)
 				)
 			)
-			.groupBy(
-				sql`to_char((${task.updatedAt} AT TIME ZONE ${TZ}), 'YYYY-MM')`,
-				task.projectId
-			)
+			.groupBy(monthBucket, task.projectId)
 	]);
 
 	const pendingTasks = Number(pendingRow?.value ?? 0);
