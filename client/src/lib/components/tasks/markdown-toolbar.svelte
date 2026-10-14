@@ -1,5 +1,5 @@
 ﻿<script lang="ts">
-	import { Bold, Italic, List, ListOrdered, Quote, Heading, Keyboard } from '@lucide/svelte';
+	import { Bold, Italic, List, ListOrdered, ListTodo, Quote, Heading, Keyboard } from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
@@ -105,6 +105,16 @@
 		title="Lista ordenada"
 	>
 		<ListOrdered />
+	</Button>
+	<Button
+		type="button"
+		variant="ghost"
+		size="icon-xs"
+		onclick={() => runAction('tasklist')}
+		aria-label="Lista de tarefas"
+		title="Lista de tarefas (- [ ])"
+	>
+		<ListTodo />
 	</Button>
 	<Button
 		type="button"

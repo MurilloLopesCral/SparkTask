@@ -63,6 +63,11 @@ export async function saveTask(taskId: string, values: TaskFormValues) {
 	return ok;
 }
 
+/** Persist only the description (e.g. toggling markdown todos). No success toast. */
+export async function saveTaskDescription(taskId: string, description: string) {
+	return patchTask(taskId, { description: description || null });
+}
+
 export interface CreateTaskValues {
 	title: string;
 	description: string;

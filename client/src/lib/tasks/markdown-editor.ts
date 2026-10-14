@@ -3,6 +3,7 @@
 	| 'italic'
 	| 'unordered'
 	| 'ordered'
+	| 'tasklist'
 	| 'blockquote'
 	| 'h1'
 	| 'h2'
@@ -46,6 +47,13 @@ export const MARKDOWN_SHORTCUTS: MarkdownShortcut[] = [
 		mod: 'mod-shift',
 		key: '7',
 		displayKeys: ['Mod', 'Shift', '7']
+	},
+	{
+		action: 'tasklist',
+		label: 'Lista de tarefas',
+		mod: 'mod-shift',
+		key: '9',
+		displayKeys: ['Mod', 'Shift', '9']
 	},
 	{
 		action: 'blockquote',
@@ -105,17 +113,23 @@ function toggleLinePrefix(
 
 	const headingRe = /^#{1,6}\s+/;
 	const quoteRe = /^>\s?/;
+	const taskRe = /^[-*+]\s+\[[ xX]\]\s+/;
 	const unorderedRe = /^[-*+]\s+/;
 	const orderedRe = /^\d+\.\s+/;
 
 	const stripKnown = (line: string) =>
-		line.replace(headingRe, '').replace(quoteRe, '').replace(unorderedRe, '').replace(orderedRe, '');
+		line
+			.replace(taskRe, '')
+			.replace(headingRe, '')
+			.replace(quoteRe, '')
+			.replace(orderedRe, '')
+			.replace(unorderedRe, '');
 
 	const allHavePrefix = lines.every((line) => {
 		if (ordered) return orderedRe.test(line);
 		if (prefix === '> ') return quoteRe.test(line);
 		if (prefix.startsWith('#')) return line.startsWith(prefix);
-		return unorderedRe.test(line);
+		return unorderedRe.test(line) || taskRe.test(line);
 	});
 
 	const nextLines = lines.map((line, index) => {
@@ -134,6 +148,58 @@ function toggleLinePrefix(
 	};
 }
 
+function toggleTaskListPrefix(value: string, start: number, end: number) {
+	const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+	const lineEndIdx = value.indexOf('\n', end);
+	const lineEnd = lineEndIdx === -1 ? value.length : lineEndIdx;
+	const block = value.slice(lineStart, lineEnd);
+	const lines = block.split('\n');
+
+	const headingRe = /^#{1,6}\s+/;
+	const quoteRe = /^>\s?/;
+	const taskRe = /^[-*+]\s+\[[ xX]\]\s+/;
+	const unorderedRe = /^[-*+]\s+/;
+	const orderedRe = /^\d+\.\s+/;
+
+	const stripKnown = (line: string) =>
+		line
+			.replace(taskRe, '')
+			.replace(headingRe, '')
+			.replace(quoteRe, '')
+			.replace(orderedRe, '')
+			.replace(unorderedRe, '');
+
+	const allTasks = lines.every((line) => taskRe.test(line));
+
+	const nextLines = lines.map((line) => {
+		const bare = stripKnown(line);
+		if (allTasks) return bare;
+		return `- [ ] ${bare}`;
+	});
+
+	const joined = nextLines.join('\n');
+	const next = value.slice(0, lineStart) + joined + value.slice(lineEnd);
+	return {
+		next,
+		cursorStart: lineStart,
+		cursorEnd: lineStart + joined.length
+	};
+}
+
+/** Flip the Nth GFM task checkbox (`- [ ]` / `- [x]`) in a markdown source. */
+export function toggleMarkdownTaskAt(source: string, index: number): string | null {
+	const re = /^(\s*(?:[-*+]|\d+\.)\s+)\[([ xX])\]/gm;
+	let i = 0;
+	let found = false;
+	const next = source.replace(re, (match, prefix: string, mark: string) => {
+		if (i++ !== index) return match;
+		found = true;
+		const checked = mark.toLowerCase() === 'x';
+		return `${prefix}[${checked ? ' ' : 'x'}]`;
+	});
+	return found ? next : null;
+}
+
 export function applyMarkdownAction(
 	value: string,
 	start: number,
@@ -149,6 +215,8 @@ export function applyMarkdownAction(
 			return toggleLinePrefix(value, start, end, '- ');
 		case 'ordered':
 			return toggleLinePrefix(value, start, end, '1. ', true);
+		case 'tasklist':
+			return toggleTaskListPrefix(value, start, end);
 		case 'blockquote':
 			return toggleLinePrefix(value, start, end, '> ');
 		case 'h1':

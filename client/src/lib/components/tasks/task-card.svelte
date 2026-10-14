@@ -1,17 +1,20 @@
 ﻿<script lang="ts">
 	import { Card } from '$lib/components/ui/card/index.js';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as Avatar from '$lib/components/ui/avatar/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-	import SvelteMarkdown from 'svelte-markdown';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
+	import MarkdownDescription from './markdown-description.svelte';
 	import {
 		MoreVerticalIcon,
 		Delete02Icon,
 		Edit02Icon,
 		CheckmarkCircle02Icon,
 		Calendar03Icon,
-		Attachment01Icon
+		Attachment01Icon,
+		PlayIcon,
+		PauseIcon
 	} from '@hugeicons/core-free-icons';
 	import StatusBadge from './status-badge.svelte';
 	import TaskDetailsDialog from './task-details-dialog.svelte';
@@ -148,7 +151,7 @@
 
 		{#if task.description}
 			<div class="markdown-body line-clamp-3 font-serif text-body-sm text-muted-foreground">
-				<SvelteMarkdown source={task.description} />
+				<MarkdownDescription source={task.description} />
 			</div>
 		{/if}
 
@@ -171,34 +174,35 @@
 			<div
 				role="presentation"
 				onclick={(e) => e.stopPropagation()}
-				class="flex flex-wrap gap-xs border-t border-frame/20 pt-sm"
+				class="flex flex-wrap items-center gap-xs border-t border-frame/20 pt-sm"
 			>
 				{#if !isRunning}
-					<button
-						type="button"
-						class="btn-primary min-h-11 flex-1 px-sm py-xs text-[11px] sm:flex-none"
+					<Button
+						size="sm"
 						disabled={busyAction !== null}
 						onclick={() => runExecution('start')}
 					>
+						<HugeiconsIcon icon={PlayIcon} strokeWidth={2} data-icon="inline-start" />
 						{busyAction === 'start' ? 'Iniciando…' : 'Iniciar'}
-					</button>
+					</Button>
 				{:else}
-					<button
-						type="button"
-						class="btn-secondary min-h-11 flex-1 px-sm py-xs text-[11px]"
+					<Button
+						size="sm"
+						variant="outline"
 						disabled={busyAction !== null}
 						onclick={() => runExecution('pause')}
 					>
+						<HugeiconsIcon icon={PauseIcon} strokeWidth={2} data-icon="inline-start" />
 						{busyAction === 'pause' ? 'Pausando…' : 'Pausar'}
-					</button>
-					<button
-						type="button"
-						class="btn-primary min-h-11 flex-1 px-sm py-xs text-[11px]"
+					</Button>
+					<Button
+						size="sm"
 						disabled={busyAction !== null}
 						onclick={() => runExecution('finish')}
 					>
+						<HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} data-icon="inline-start" />
 						{busyAction === 'finish' ? 'Finalizando…' : 'Finalizar'}
-					</button>
+					</Button>
 				{/if}
 			</div>
 		{/if}

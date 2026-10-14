@@ -3,7 +3,6 @@
 	import * as Select from '$lib/components/ui/select/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import * as Avatar from '$lib/components/ui/avatar/index.js';
-	import SvelteMarkdown from 'svelte-markdown';
 	import { toast } from 'svelte-sonner';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import {
@@ -16,6 +15,7 @@
 	} from '@hugeicons/core-free-icons';
 	import StatusBadge from './status-badge.svelte';
 	import MarkdownToolbar from './markdown-toolbar.svelte';
+	import MarkdownDescription from './markdown-description.svelte';
 	import {
 		TASK_STATUSES,
 		TASK_PRIORITIES,
@@ -26,7 +26,8 @@
 	} from '$lib/tasks/constants';
 	import { formatDate, formatFileSize, dueDateStatusClass } from '$lib/tasks/format';
 	import { getInitials } from '$lib/users/format';
-	import { saveTask, setTaskStatus } from '$lib/tasks/api';
+	import { saveTask, saveTaskDescription, setTaskStatus } from '$lib/tasks/api';
+	import { toggleMarkdownTaskAt } from '$lib/tasks/markdown-editor';
 	import {
 		uploadTaskFile,
 		removeTaskFile,
@@ -54,7 +55,9 @@
 	let editing = $state(false);
 	let saving = $state(false);
 	let uploading = $state(false);
+	let togglingTodo = $state(false);
 	let form = $state(toFormState(task));
+	let viewDescription = $state(task.description ?? '');
 	let descriptionEl = $state<HTMLTextAreaElement | null>(null);
 
 	function toFormState(t: VisibleTask) {
@@ -88,7 +91,14 @@
 	$effect(() => {
 		if (open) {
 			form = toFormState(task);
+			viewDescription = task.description ?? '';
 			editing = initialEditing;
+		}
+	});
+
+	$effect(() => {
+		if (!editing && !togglingTodo) {
+			viewDescription = task.description ?? '';
 		}
 	});
 
@@ -112,6 +122,22 @@
 	function handleDiscard() {
 		form = toFormState(task);
 		editing = false;
+	}
+
+	async function handleToggleTodo(index: number) {
+		if (togglingTodo) return;
+		const next = toggleMarkdownTaskAt(viewDescription, index);
+		if (next == null) return;
+
+		const previous = viewDescription;
+		viewDescription = next;
+		togglingTodo = true;
+		try {
+			const ok = await saveTaskDescription(task.id, next);
+			if (!ok) viewDescription = previous;
+		} finally {
+			togglingTodo = false;
+		}
 	}
 
 	async function handleCancelTask() {
@@ -312,7 +338,8 @@
 					></textarea>
 				</div>
 				<span class="font-serif text-caption text-muted-foreground">
-					Aceita Markdown. Ctrl+V (⌘V) cola anexos aqui ou com o diálogo focado.
+					Aceita Markdown, inclusive ToDos (- [ ]). Ctrl+V (⌘V) cola anexos aqui ou com o diálogo
+					focado.
 				</span>
 			</div>
 
@@ -328,9 +355,13 @@
 				</span>
 			</div>
 
-			{#if task.description}
+			{#if viewDescription}
 				<div class="markdown-body font-serif text-body">
-					<SvelteMarkdown source={task.description} />
+					<MarkdownDescription
+						source={viewDescription}
+						interactive
+						ontoggle={handleToggleTodo}
+					/>
 				</div>
 			{/if}
 		{/if}
