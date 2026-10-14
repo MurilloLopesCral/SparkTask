@@ -7,8 +7,10 @@
 	import {
 		TASK_PRIORITIES,
 		TASK_TYPES,
+		TASK_KINDS,
 		TASK_PRIORITY_META,
-		TASK_TYPE_META
+		TASK_TYPE_META,
+		TASK_KIND_META
 	} from '$lib/tasks/constants';
 	import { createTask } from '$lib/tasks/api';
 	import MarkdownToolbar from './markdown-toolbar.svelte';
@@ -33,6 +35,7 @@
 			projectId: projects[0]?.id ?? '',
 			priority: 'medium',
 			type: 'mandatory',
+			kind: 'improvement',
 			dueDate: '',
 			ownerId: ''
 		};
@@ -130,6 +133,20 @@
 							<Select.Item value="" label="Sem responsável" />
 							{#each availableOwners as m (m.id)}
 								<Select.Item value={m.id} label={m.name || m.email} />
+							{/each}
+						</Select.Content>
+					</Select.Root>
+				</label>
+
+				<label class="flex flex-col gap-xxs">
+					<span class="font-sans text-ui-label uppercase">Classificação</span>
+					<Select.Root type="single" bind:value={form.kind}>
+						<Select.Trigger class="w-full"
+							>{TASK_KIND_META[form.kind as keyof typeof TASK_KIND_META].label}</Select.Trigger
+						>
+						<Select.Content>
+							{#each TASK_KINDS as option (option.value)}
+								<Select.Item value={option.value} label={option.label} />
 							{/each}
 						</Select.Content>
 					</Select.Root>

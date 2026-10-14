@@ -43,6 +43,7 @@ export interface TaskFormValues {
 	status: string;
 	priority: string;
 	type: string;
+	kind: string;
 	dueDate: string;
 	ownerId: string;
 	projectId: string;
@@ -55,6 +56,7 @@ export async function saveTask(taskId: string, values: TaskFormValues) {
 		status: values.status,
 		priority: values.priority,
 		type: values.type,
+		kind: values.kind,
 		dueDate: values.dueDate || null,
 		ownerId: values.ownerId || null,
 		projectId: values.projectId
@@ -74,6 +76,7 @@ export interface CreateTaskValues {
 	projectId: string;
 	priority: string;
 	type: string;
+	kind: string;
 	dueDate: string;
 	ownerId: string;
 }
@@ -88,6 +91,7 @@ export async function createTask(values: CreateTaskValues) {
 			projectId: values.projectId,
 			priority: values.priority,
 			type: values.type,
+			kind: values.kind,
 			dueDate: values.dueDate || undefined,
 			ownerId: values.ownerId || undefined
 		})

@@ -1,6 +1,11 @@
 ﻿import { error, json } from '@sveltejs/kit';
 import { z } from 'zod';
-import { taskPriorityEnum, taskStatusEnum, taskTypeEnum } from '$lib/server/db/schema';
+import {
+	taskKindEnum,
+	taskPriorityEnum,
+	taskStatusEnum,
+	taskTypeEnum
+} from '$lib/server/db/schema';
 import { autoCloseOpenExecutions } from '$lib/server/executions';
 import {
 	deleteTaskById,
@@ -19,6 +24,7 @@ const patchTaskSchema = z
 		status: z.enum(taskStatusEnum.enumValues),
 		priority: z.enum(taskPriorityEnum.enumValues),
 		type: z.enum(taskTypeEnum.enumValues),
+		kind: z.enum(taskKindEnum.enumValues),
 		dueDate: z.string().nullable(),
 		ownerId: z.string().uuid().nullable(),
 		projectId: z.string().uuid()

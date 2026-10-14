@@ -28,6 +28,9 @@ export const taskPriorityEnum = pgEnum('task_priority', ['low', 'medium', 'high'
 
 export const taskTypeEnum = pgEnum('task_type', ['mandatory', 'optional', 'desirable']);
 
+/** Work nature — distinct from `type` (mandatory/optional/desirable). */
+export const taskKindEnum = pgEnum('task_kind', ['error', 'improvement']);
+
 export const taskStatusEnum = pgEnum('task_status', [
 	'not_started',
 	'in_progress',
@@ -174,6 +177,7 @@ export const task = pgTable('task', {
 	dueDate: date('due_date'),
 	priority: taskPriorityEnum('priority').notNull(),
 	type: taskTypeEnum('type').notNull(),
+	kind: taskKindEnum('kind').notNull().default('improvement'),
 	status: taskStatusEnum('status').notNull().default('not_started'),
 	// Assignee — nullable: a task can sit unclaimed until someone picks it up.
 	ownerId: uuid('owner_id').references(() => user.id, { onDelete: 'set null' }),

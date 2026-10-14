@@ -5,6 +5,7 @@ import {
 	project,
 	task,
 	user,
+	type taskKindEnum,
 	type taskPriorityEnum,
 	type taskStatusEnum,
 	type taskTypeEnum
@@ -173,6 +174,7 @@ export interface CreateTaskInput {
 	projectId: string;
 	priority: (typeof taskPriorityEnum.enumValues)[number];
 	type: (typeof taskTypeEnum.enumValues)[number];
+	kind: (typeof taskKindEnum.enumValues)[number];
 	dueDate: string | null;
 	ownerId: string | null;
 	createdBy: string;
@@ -189,6 +191,7 @@ export interface TaskUpdateFields {
 	status?: (typeof taskStatusEnum.enumValues)[number];
 	priority?: (typeof taskPriorityEnum.enumValues)[number];
 	type?: (typeof taskTypeEnum.enumValues)[number];
+	kind?: (typeof taskKindEnum.enumValues)[number];
 	dueDate?: string | null;
 	ownerId?: string | null;
 	projectId?: string;

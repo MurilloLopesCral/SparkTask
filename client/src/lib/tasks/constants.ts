@@ -1,8 +1,14 @@
-import type { taskPriorityEnum, taskStatusEnum, taskTypeEnum } from '$lib/server/db/schema';
+﻿import type {
+	taskKindEnum,
+	taskPriorityEnum,
+	taskStatusEnum,
+	taskTypeEnum
+} from '$lib/server/db/schema';
 
 export type TaskStatus = (typeof taskStatusEnum.enumValues)[number];
 export type TaskPriority = (typeof taskPriorityEnum.enumValues)[number];
 export type TaskType = (typeof taskTypeEnum.enumValues)[number];
+export type TaskKind = (typeof taskKindEnum.enumValues)[number];
 
 // Column/board order — also the sort priority when grouping by status.
 export const TASK_STATUSES: { value: TaskStatus; label: string; badgeClass: string }[] = [
@@ -37,4 +43,14 @@ export const TASK_TYPES: { value: TaskType; label: string }[] = [
 export const TASK_TYPE_META = Object.fromEntries(TASK_TYPES.map((t) => [t.value, t])) as Record<
 	TaskType,
 	(typeof TASK_TYPES)[number]
+>;
+
+export const TASK_KINDS: { value: TaskKind; label: string; badgeClass: string }[] = [
+	{ value: 'error', label: 'Erro', badgeClass: 'bg-dell-red text-on-red' },
+	{ value: 'improvement', label: 'Melhoria', badgeClass: 'bg-sticker-yellow text-ink' }
+];
+
+export const TASK_KIND_META = Object.fromEntries(TASK_KINDS.map((k) => [k.value, k])) as Record<
+	TaskKind,
+	(typeof TASK_KINDS)[number]
 >;

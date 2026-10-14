@@ -17,6 +17,7 @@
 		PauseIcon
 	} from '@hugeicons/core-free-icons';
 	import StatusBadge from './status-badge.svelte';
+	import KindBadge from './kind-badge.svelte';
 	import TaskDetailsDialog from './task-details-dialog.svelte';
 	import TaskConfettiBurst from './task-confetti-burst.svelte';
 	import { TASK_STATUSES, TASK_PRIORITY_META, TASK_TYPE_META } from '$lib/tasks/constants';
@@ -95,7 +96,10 @@
 			? 'cursor-grab transition-[transform,box-shadow] duration-150 hover:z-10 hover:scale-[1.02] hover:shadow-[4px_4px_0_var(--frame)] active:cursor-grabbing active:scale-100 active:shadow-none'
 			: 'cursor-pointer'}"
 	>
-		<Badge variant="outline" class="badge-sticker w-fit">{task.project.name}</Badge>
+		<div class="flex items-center justify-between gap-sm">
+			<Badge variant="outline" class="badge-sticker w-fit">{task.project.name}</Badge>
+			<KindBadge kind={task.kind} />
+		</div>
 
 		<div class="flex items-start justify-between gap-sm">
 			<p class="min-w-0 flex-1 font-sans text-h3 uppercase text-pretty">{task.title}</p>

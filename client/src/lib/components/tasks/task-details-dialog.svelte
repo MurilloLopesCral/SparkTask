@@ -14,15 +14,18 @@
 		Delete02Icon
 	} from '@hugeicons/core-free-icons';
 	import StatusBadge from './status-badge.svelte';
+	import KindBadge from './kind-badge.svelte';
 	import MarkdownToolbar from './markdown-toolbar.svelte';
 	import MarkdownDescription from './markdown-description.svelte';
 	import {
 		TASK_STATUSES,
 		TASK_PRIORITIES,
 		TASK_TYPES,
+		TASK_KINDS,
 		TASK_STATUS_META,
 		TASK_PRIORITY_META,
-		TASK_TYPE_META
+		TASK_TYPE_META,
+		TASK_KIND_META
 	} from '$lib/tasks/constants';
 	import { formatDate, formatFileSize, dueDateStatusClass } from '$lib/tasks/format';
 	import { getInitials } from '$lib/users/format';
@@ -67,6 +70,7 @@
 			status: t.status as string,
 			priority: t.priority as string,
 			type: t.type as string,
+			kind: t.kind as string,
 			dueDate: t.dueDate ?? '',
 			ownerId: t.ownerId ?? '',
 			projectId: t.projectId
@@ -244,7 +248,12 @@
 				{:else}
 					<AlertDialog.Title>{task.title}</AlertDialog.Title>
 				{/if}
-				<AlertDialog.Description>{projectLabel}</AlertDialog.Description>
+				<div class="flex flex-wrap items-center gap-xs">
+					<AlertDialog.Description class="m-0">{projectLabel}</AlertDialog.Description>
+					{#if !editing}
+						<KindBadge kind={task.kind} />
+					{/if}
+				</div>
 			</div>
 			{#if !editing}
 				<button
@@ -289,6 +298,17 @@
 					>
 					<Select.Content>
 						{#each TASK_TYPES as option (option.value)}
+							<Select.Item value={option.value} label={option.label} />
+						{/each}
+					</Select.Content>
+				</Select.Root>
+
+				<Select.Root type="single" bind:value={form.kind}>
+					<Select.Trigger
+						>{TASK_KIND_META[form.kind as keyof typeof TASK_KIND_META].label}</Select.Trigger
+					>
+					<Select.Content>
+						{#each TASK_KINDS as option (option.value)}
 							<Select.Item value={option.value} label={option.label} />
 						{/each}
 					</Select.Content>

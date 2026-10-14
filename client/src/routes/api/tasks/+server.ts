@@ -1,6 +1,11 @@
-import { error, json } from '@sveltejs/kit';
+﻿import { error, json } from '@sveltejs/kit';
 import { z } from 'zod';
-import { taskPriorityEnum, taskStatusEnum, taskTypeEnum } from '$lib/server/db/schema';
+import {
+	taskKindEnum,
+	taskPriorityEnum,
+	taskStatusEnum,
+	taskTypeEnum
+} from '$lib/server/db/schema';
 import {
 	createTask,
 	getVisibleTasks,
@@ -15,6 +20,7 @@ const createTaskSchema = z.object({
 	projectId: z.string().uuid(),
 	priority: z.enum(taskPriorityEnum.enumValues),
 	type: z.enum(taskTypeEnum.enumValues),
+	kind: z.enum(taskKindEnum.enumValues),
 	dueDate: z.string().optional(),
 	ownerId: z.string().uuid().optional()
 });
@@ -73,6 +79,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		projectId: parsed.data.projectId,
 		priority: parsed.data.priority,
 		type: parsed.data.type,
+		kind: parsed.data.kind,
 		dueDate: parsed.data.dueDate || null,
 		ownerId: parsed.data.ownerId || null,
 		createdBy: locals.user.id

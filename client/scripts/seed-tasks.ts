@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+﻿import { readFileSync } from 'node:fs';
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
@@ -49,6 +49,7 @@ const sampleTasks: (typeof schema.task.$inferInsert)[] = [
 		projectId: demoProject.id,
 		priority: 'high',
 		type: 'mandatory',
+		kind: 'improvement',
 		status: 'not_started',
 		ownerId: owner.memberId,
 		createdBy: owner.memberId,
@@ -59,6 +60,7 @@ const sampleTasks: (typeof schema.task.$inferInsert)[] = [
 		projectId: demoProject.id,
 		priority: 'low',
 		type: 'optional',
+		kind: 'improvement',
 		status: 'not_started',
 		createdBy: owner.memberId,
 		createdAt: hours(30)
@@ -69,6 +71,7 @@ const sampleTasks: (typeof schema.task.$inferInsert)[] = [
 		projectId: demoProject.id,
 		priority: 'medium',
 		type: 'desirable',
+		kind: 'improvement',
 		status: 'in_progress',
 		ownerId: owner.memberId,
 		createdBy: owner.memberId,
@@ -79,6 +82,7 @@ const sampleTasks: (typeof schema.task.$inferInsert)[] = [
 		projectId: demoProject.id,
 		priority: 'critical',
 		type: 'mandatory',
+		kind: 'error',
 		status: 'in_progress',
 		ownerId: owner.memberId,
 		createdBy: owner.memberId,
@@ -89,6 +93,7 @@ const sampleTasks: (typeof schema.task.$inferInsert)[] = [
 		projectId: demoProject.id,
 		priority: 'medium',
 		type: 'mandatory',
+		kind: 'improvement',
 		status: 'stand_by',
 		createdBy: owner.memberId,
 		createdAt: hours(10)
@@ -98,6 +103,7 @@ const sampleTasks: (typeof schema.task.$inferInsert)[] = [
 		projectId: demoProject.id,
 		priority: 'high',
 		type: 'mandatory',
+		kind: 'improvement',
 		status: 'done',
 		ownerId: owner.memberId,
 		createdBy: owner.memberId,
@@ -109,6 +115,7 @@ const sampleTasks: (typeof schema.task.$inferInsert)[] = [
 		projectId: demoProject.id,
 		priority: 'medium',
 		type: 'mandatory',
+		kind: 'error',
 		status: 'done',
 		ownerId: owner.memberId,
 		createdBy: owner.memberId,
@@ -119,6 +126,7 @@ const sampleTasks: (typeof schema.task.$inferInsert)[] = [
 		projectId: demoProject.id,
 		priority: 'low',
 		type: 'optional',
+		kind: 'improvement',
 		status: 'cancelled',
 		createdBy: owner.memberId,
 		createdAt: hours(200)
