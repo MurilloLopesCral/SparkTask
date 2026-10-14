@@ -4,6 +4,18 @@ import { task, taskExecution, type taskExecutionEndReasonEnum } from './db/schem
 
 export type ExecutionEndReason = (typeof taskExecutionEndReasonEnum.enumValues)[number];
 
+export async function listTaskExecutions(taskId: string) {
+	return db.query.taskExecution.findMany({
+		where: eq(taskExecution.taskId, taskId),
+		orderBy: [desc(taskExecution.startedAt)],
+		with: {
+			user: {
+				columns: { id: true, name: true, email: true, image: true }
+			}
+		}
+	});
+}
+
 export async function getOpenExecution(taskId: string, userId: string) {
 	const [row] = await db
 		.select({

@@ -1,12 +1,27 @@
 ﻿import { error, json } from '@sveltejs/kit';
 import { z } from 'zod';
-import { finishExecution, pauseExecution, startExecution } from '$lib/server/executions';
+import {
+	finishExecution,
+	listTaskExecutions,
+	pauseExecution,
+	startExecution
+} from '$lib/server/executions';
 import { userCanAccessTask } from '$lib/server/tasks';
 import type { RequestHandler } from './$types';
 
 const actionSchema = z.object({
 	action: z.enum(['start', 'pause', 'finish'])
 });
+
+/** GET /api/tasks/:id/execution — list timed work intervals for the task. */
+export const GET: RequestHandler = async ({ params, locals }) => {
+	if (!locals.user) error(401, 'Não autenticado.');
+	if (!(await userCanAccessTask(locals.user.id, params.id)))
+		error(403, 'Sem acesso a esta tarefa.');
+
+	const executions = await listTaskExecutions(params.id);
+	return json({ executions });
+};
 
 /** POST /api/tasks/:id/execution — start, pause, or finish timed work on a task. */
 export const POST: RequestHandler = async ({ params, request, locals }) => {

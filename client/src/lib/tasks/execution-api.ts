@@ -4,6 +4,33 @@ import { celebration } from './celebration.svelte';
 
 type ExecutionAction = 'start' | 'pause' | 'finish';
 
+export type TaskExecutionRow = {
+	id: string;
+	taskId: string;
+	userId: string;
+	startedAt: string | Date;
+	endedAt: string | Date | null;
+	endReason: 'paused' | 'completed' | 'auto_closed' | null;
+	createdAt: string | Date;
+	user: {
+		id: string;
+		name: string | null;
+		email: string;
+		image: string | null;
+	};
+};
+
+export async function fetchTaskExecutions(taskId: string): Promise<TaskExecutionRow[]> {
+	const res = await fetch(`/api/tasks/${taskId}/execution`);
+	if (!res.ok) {
+		const data = await res.json().catch(() => ({}));
+		toast.error(data.message ?? 'Não foi possível carregar as execuções.');
+		return [];
+	}
+	const data = (await res.json()) as { executions: TaskExecutionRow[] };
+	return data.executions ?? [];
+}
+
 async function postExecution(taskId: string, action: ExecutionAction) {
 	const res = await fetch(`/api/tasks/${taskId}/execution`, {
 		method: 'POST',

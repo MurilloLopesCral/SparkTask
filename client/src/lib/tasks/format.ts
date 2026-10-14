@@ -30,6 +30,27 @@ export function formatDate(value: string | Date | null | undefined) {
 	return dateFormatter.format(toLocalDate(value));
 }
 
+const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
+	dateStyle: 'short',
+	timeStyle: 'short'
+});
+
+export function formatDateTime(value: string | Date | null | undefined) {
+	if (!value) return null;
+	return dateTimeFormatter.format(value instanceof Date ? value : new Date(value));
+}
+
+/** Human-readable duration from seconds (e.g. `1h 12min`, `5min 3s`). */
+export function formatDuration(totalSeconds: number) {
+	const seconds = Math.max(0, Math.floor(totalSeconds));
+	const hours = Math.floor(seconds / 3600);
+	const minutes = Math.floor((seconds % 3600) / 60);
+	const secs = seconds % 60;
+	if (hours > 0) return `${hours}h ${minutes}min`;
+	if (minutes > 0) return secs > 0 ? `${minutes}min ${secs}s` : `${minutes}min`;
+	return `${secs}s`;
+}
+
 export type DueDateStatus = 'overdue' | 'urgent' | 'ok';
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;

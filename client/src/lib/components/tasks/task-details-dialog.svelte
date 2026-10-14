@@ -11,12 +11,15 @@
 		File02Icon,
 		ViewIcon,
 		Download01Icon,
-		Delete02Icon
+		Delete02Icon,
+		Copy01Icon,
+		Time04Icon
 	} from '@hugeicons/core-free-icons';
 	import StatusBadge from './status-badge.svelte';
 	import KindBadge from './kind-badge.svelte';
 	import MarkdownToolbar from './markdown-toolbar.svelte';
 	import MarkdownDescription from './markdown-description.svelte';
+	import TaskExecutionsDrawer from './task-executions-drawer.svelte';
 	import {
 		TASK_STATUSES,
 		TASK_PRIORITIES,
@@ -35,6 +38,8 @@
 		uploadTaskFile,
 		removeTaskFile,
 		taskFileDownloadUrl,
+		copyTaskImageToClipboard,
+		isImageAttachment,
 		type FileUploadConfig
 	} from '$lib/tasks/files-api';
 	import type { VisibleTask } from '$lib/server/tasks';
@@ -59,6 +64,8 @@
 	let saving = $state(false);
 	let uploading = $state(false);
 	let togglingTodo = $state(false);
+	let executionsOpen = $state(false);
+	let copyingImageId = $state<string | null>(null);
 	let form = $state(toFormState(task));
 	let viewDescription = $state(task.description ?? '');
 	let descriptionEl = $state<HTMLTextAreaElement | null>(null);
@@ -141,6 +148,16 @@
 			if (!ok) viewDescription = previous;
 		} finally {
 			togglingTodo = false;
+		}
+	}
+
+	async function handleCopyImage(attachment: VisibleTask['files'][number]) {
+		if (copyingImageId) return;
+		copyingImageId = attachment.id;
+		try {
+			await copyTaskImageToClipboard(attachment.assetUrl);
+		} finally {
+			copyingImageId = null;
 		}
 	}
 
@@ -256,14 +273,40 @@
 				</div>
 			</div>
 			{#if !editing}
-				<button
-					type="button"
-					class="grid size-8 shrink-0 place-items-center"
-					onclick={() => (editing = true)}
-				>
-					<HugeiconsIcon icon={Edit02Icon} strokeWidth={2} />
-					<span class="sr-only">Editar tarefa</span>
-				</button>
+				<div class="flex shrink-0 items-center gap-xxs">
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							{#snippet child({ props })}
+								<button
+									{...props}
+									type="button"
+									class="grid size-8 place-items-center"
+									onclick={() => (executionsOpen = true)}
+								>
+									<HugeiconsIcon icon={Time04Icon} strokeWidth={2} />
+									<span class="sr-only">Ver execuções</span>
+								</button>
+							{/snippet}
+						</Tooltip.Trigger>
+						<Tooltip.Content>Execuções</Tooltip.Content>
+					</Tooltip.Root>
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							{#snippet child({ props })}
+								<button
+									{...props}
+									type="button"
+									class="grid size-8 place-items-center"
+									onclick={() => (editing = true)}
+								>
+									<HugeiconsIcon icon={Edit02Icon} strokeWidth={2} />
+									<span class="sr-only">Editar tarefa</span>
+								</button>
+							{/snippet}
+						</Tooltip.Trigger>
+						<Tooltip.Content>Editar tarefa</Tooltip.Content>
+					</Tooltip.Root>
+				</div>
 			{/if}
 		</AlertDialog.Header>
 
@@ -466,6 +509,25 @@
 								</Tooltip.Trigger>
 								<Tooltip.Content>Visualizar arquivo</Tooltip.Content>
 							</Tooltip.Root>
+							{#if isImageAttachment(attachment)}
+								<Tooltip.Root>
+									<Tooltip.Trigger>
+										{#snippet child({ props })}
+											<button
+												{...props}
+												type="button"
+												class="grid size-6 shrink-0 cursor-pointer place-items-center disabled:opacity-40"
+												disabled={copyingImageId === attachment.id}
+												onclick={() => handleCopyImage(attachment)}
+											>
+												<HugeiconsIcon icon={Copy01Icon} strokeWidth={2} />
+												<span class="sr-only">Copiar imagem</span>
+											</button>
+										{/snippet}
+									</Tooltip.Trigger>
+									<Tooltip.Content>Copiar imagem</Tooltip.Content>
+								</Tooltip.Root>
+							{/if}
 							<Tooltip.Root>
 								<Tooltip.Trigger>
 									{#snippet child({ props })}
@@ -520,3 +582,5 @@
 		</AlertDialog.Footer>
 	</AlertDialog.Content>
 </AlertDialog.Root>
+
+<TaskExecutionsDrawer bind:open={executionsOpen} taskId={task.id} taskTitle={task.title} />
