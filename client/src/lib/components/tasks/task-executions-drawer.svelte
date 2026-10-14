@@ -41,15 +41,24 @@
 		}
 	}
 
-	function durationLabel(row: TaskExecutionRow) {
+	function durationSeconds(row: TaskExecutionRow) {
 		const start = new Date(row.startedAt).getTime();
 		const end = row.endedAt ? new Date(row.endedAt).getTime() : Date.now();
-		return formatDuration((end - start) / 1000);
+		return Math.max(0, (end - start) / 1000);
+	}
+
+	function durationLabel(row: TaskExecutionRow) {
+		return formatDuration(durationSeconds(row));
 	}
 
 	function userLabel(row: TaskExecutionRow) {
 		return row.user.name || row.user.email;
 	}
+
+	const totalSeconds = $derived(
+		executions.reduce((sum, row) => sum + durationSeconds(row), 0)
+	);
+	const totalLabel = $derived(formatDuration(totalSeconds));
 </script>
 
 <Drawer.Root bind:open direction="right">
@@ -61,6 +70,18 @@
 			<Drawer.Description class="font-serif text-caption text-muted-foreground">
 				Inícios e términos de “{taskTitle}”.
 			</Drawer.Description>
+			<div
+				class="mt-sm flex items-baseline justify-between gap-sm border border-frame bg-canvas px-sm py-xs"
+			>
+				<span class="font-sans text-ui-label uppercase text-muted-foreground">Tempo total</span>
+				<span class="font-sans text-h3 uppercase tabular-nums">
+					{#if loading}
+						…
+					{:else}
+						{totalLabel}
+					{/if}
+				</span>
+			</div>
 		</Drawer.Header>
 
 		<div class="flex min-h-0 flex-1 flex-col gap-sm overflow-y-auto px-lg py-md">
