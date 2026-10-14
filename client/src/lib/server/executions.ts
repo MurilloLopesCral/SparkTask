@@ -1,4 +1,4 @@
-﻿import { and, desc, eq, isNull } from 'drizzle-orm';
+﻿import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { db } from './db';
 import { task, taskExecution, type taskExecutionEndReasonEnum } from './db/schema';
 
@@ -115,6 +115,37 @@ export async function pauseExecution(taskId: string, userId: string) {
 		.where(eq(task.id, taskId));
 
 	return { ok: true as const, execution: closed };
+}
+
+/** Pause every open execution for a user (end-of-day bulk stop). */
+export async function pauseAllOpenExecutionsForUser(userId: string) {
+	const open = await db
+		.select({
+			id: taskExecution.id,
+			taskId: taskExecution.taskId
+		})
+		.from(taskExecution)
+		.where(and(eq(taskExecution.userId, userId), isNull(taskExecution.endedAt)));
+
+	if (open.length === 0) {
+		return { paused: 0, taskIds: [] as string[] };
+	}
+
+	const endedAt = new Date();
+	const ids = open.map((row) => row.id);
+	const taskIds = [...new Set(open.map((row) => row.taskId))];
+
+	await db
+		.update(taskExecution)
+		.set({ endedAt, endReason: 'paused' })
+		.where(inArray(taskExecution.id, ids));
+
+	await db
+		.update(task)
+		.set({ status: 'stand_by', updatedAt: endedAt })
+		.where(inArray(task.id, taskIds));
+
+	return { paused: open.length, taskIds };
 }
 
 export async function finishExecution(taskId: string, userId: string) {

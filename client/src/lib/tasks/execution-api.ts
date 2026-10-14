@@ -67,3 +67,26 @@ export async function finishTaskExecution(taskId: string) {
 	}
 	return ok;
 }
+
+/** Pause every open execution for the current user (end of day). */
+export async function pauseAllTaskExecutions() {
+	const res = await fetch('/api/executions/pause-all', { method: 'POST' });
+	await invalidateAll();
+
+	if (!res.ok) {
+		const data = await res.json().catch(() => ({}));
+		toast.error(data.message ?? 'Não foi possível pausar as execuções.');
+		return false;
+	}
+
+	const data = (await res.json().catch(() => ({}))) as { paused?: number };
+	const paused = data.paused ?? 0;
+	if (paused === 0) {
+		toast.message('Nenhuma execução em andamento.');
+	} else {
+		toast.success(
+			paused === 1 ? '1 execução pausada.' : `${paused} execuções pausadas.`
+		);
+	}
+	return true;
+}

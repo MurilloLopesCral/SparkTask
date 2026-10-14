@@ -14,12 +14,13 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Toggle } from '$lib/components/ui/toggle/index.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
-	import { FilterIcon, RefreshIcon } from '@hugeicons/core-free-icons';
+	import { FilterIcon, PauseIcon, RefreshIcon } from '@hugeicons/core-free-icons';
 	import TaskTable from '$lib/components/tasks/task-table.svelte';
 	import TaskKanban from '$lib/components/tasks/task-kanban.svelte';
 	import TaskList from '$lib/components/tasks/task-list.svelte';
 	import CreateTaskSheet from '$lib/components/tasks/create-task-sheet.svelte';
 	import { TASK_STATUSES, TASK_PRIORITIES, TASK_TYPES } from '$lib/tasks/constants';
+	import { pauseAllTaskExecutions } from '$lib/tasks/execution-api';
 	import { IsMobile } from '$lib/hooks/is-mobile.svelte.js';
 	import type { PageProps } from './$types';
 
@@ -27,6 +28,7 @@
 
 	const isMobile = new IsMobile();
 	const VIEW_STORAGE_KEY = 'sparktask:tasks-view';
+	const POLL_INTERVAL_MS = 30_000;
 
 	function initialView() {
 		const fromUrl = page.url.searchParams.get('view');
@@ -46,6 +48,7 @@
 	let statusFilter = $state(page.url.searchParams.get('status') ?? 'all');
 	let mineOnly = $state(page.url.searchParams.get('mine') === '1');
 	let refreshing = $state(false);
+	let pausingAll = $state(false);
 
 	async function handleRefresh() {
 		refreshing = true;
@@ -56,6 +59,52 @@
 			refreshing = false;
 		}
 	}
+
+	async function handlePauseAll() {
+		if (pausingAll) return;
+		pausingAll = true;
+		try {
+			await pauseAllTaskExecutions();
+		} finally {
+			pausingAll = false;
+		}
+	}
+
+	// Soft live updates — silent invalidate every 30s while the tab is visible.
+	$effect(() => {
+		if (!browser) return;
+
+		let timer: ReturnType<typeof setInterval> | undefined;
+
+		const tick = () => {
+			if (document.visibilityState !== 'visible') return;
+			void invalidateAll();
+		};
+
+		const start = () => {
+			if (timer !== undefined) return;
+			timer = setInterval(tick, POLL_INTERVAL_MS);
+		};
+
+		const stop = () => {
+			if (timer === undefined) return;
+			clearInterval(timer);
+			timer = undefined;
+		};
+
+		const onVisibility = () => {
+			if (document.visibilityState === 'visible') start();
+			else stop();
+		};
+
+		if (document.visibilityState === 'visible') start();
+		document.addEventListener('visibilitychange', onVisibility);
+
+		return () => {
+			stop();
+			document.removeEventListener('visibilitychange', onVisibility);
+		};
+	});
 
 	function updateUrl(next: Record<string, string | undefined>) {
 		const params = new SvelteURLSearchParams(page.url.searchParams);
@@ -370,6 +419,25 @@
 					{/if}
 				</Popover.Content>
 			</Popover.Root>
+
+			<Tooltip.Root>
+				<Tooltip.Trigger>
+					{#snippet child({ props })}
+						<Button
+							{...props}
+							variant="outline"
+							size="icon"
+							class="min-h-11 min-w-11"
+							disabled={pausingAll}
+							onclick={handlePauseAll}
+						>
+							<HugeiconsIcon icon={PauseIcon} strokeWidth={2} />
+							<span class="sr-only">Pausar todas as execuções</span>
+						</Button>
+					{/snippet}
+				</Tooltip.Trigger>
+				<Tooltip.Content>Pausar todas as execuções</Tooltip.Content>
+			</Tooltip.Root>
 
 			<Tooltip.Root>
 				<Tooltip.Trigger>
