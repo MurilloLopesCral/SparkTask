@@ -132,7 +132,7 @@
 		{:else}
 			<Chart.Container
 				config={chartConfig}
-				class="aspect-auto h-56 w-full [&_.lc-grid-x-line]:stroke-frame/25 [&_.lc-grid-y-line]:stroke-frame/25 [&_.lc-highlight-point]:fill-[var(--chart-3)] [&_.lc-spline-path]:stroke-[var(--chart-3)]"
+				class="aspect-auto h-56 w-full [&_.lc-grid-x-line]:stroke-frame/15 [&_.lc-grid-y-line]:stroke-frame/15 [&_.lc-highlight-point]:fill-[var(--chart-3)] [&_.lc-line]:stroke-[var(--chart-3)] [&_.lc-spline-path]:stroke-[var(--chart-3)]"
 			>
 				<LineChart
 					data={chartData}

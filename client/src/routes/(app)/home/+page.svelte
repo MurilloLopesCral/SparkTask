@@ -26,6 +26,17 @@
 			maximumFractionDigits: 1
 		}).format(groupStats.averageTasks)
 	);
+
+	const resolutionLabel = $derived(formatResolution(userStats.averageResolutionSeconds));
+
+	function formatResolution(seconds: number | null) {
+		if (seconds == null || seconds <= 0) return '—';
+		const hours = Math.floor(seconds / 3600);
+		const minutes = Math.round((seconds % 3600) / 60);
+		if (hours === 0) return `${minutes} min`;
+		if (minutes === 0) return `${hours}h`;
+		return `${hours}h ${minutes}min`;
+	}
 </script>
 
 <svelte:head><title>Início — SparkTask</title></svelte:head>
@@ -43,7 +54,7 @@
 	<section aria-labelledby="home-user-heading" class="flex flex-col gap-md">
 		<h2 id="home-user-heading" class="section-eyebrow section-eyebrow--olive">Você</h2>
 
-		<div class="grid grid-cols-1 gap-md sm:grid-cols-3">
+		<div class="grid grid-cols-1 gap-md sm:grid-cols-2 lg:grid-cols-4">
 			<StatCard
 				label="Tarefas pendentes"
 				value={userStats.pendingTasks}
@@ -61,6 +72,12 @@
 				value={dailyAverageLabel}
 				hint="Conclusões ÷ dias úteis decorridos no mês"
 				tint="sky"
+			/>
+			<StatCard
+				label="Média de resolução"
+				value={resolutionLabel}
+				hint="Tempo médio em execução até concluir"
+				tint="steel"
 			/>
 		</div>
 

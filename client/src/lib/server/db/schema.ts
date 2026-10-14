@@ -1,4 +1,4 @@
-import { relations } from 'drizzle-orm';
+﻿import { relations } from 'drizzle-orm';
 import {
 	boolean,
 	date,
@@ -34,6 +34,12 @@ export const taskStatusEnum = pgEnum('task_status', [
 	'stand_by',
 	'done',
 	'cancelled'
+]);
+
+export const taskExecutionEndReasonEnum = pgEnum('task_execution_end_reason', [
+	'paused',
+	'completed',
+	'auto_closed'
 ]);
 
 // Mirrors Cloudinary's own resource_type — required to call the destroy API later.
@@ -196,6 +202,21 @@ export const file = pgTable('file', {
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
+/** Timed work intervals on a task — open rows have `endedAt` null. */
+export const taskExecution = pgTable('task_execution', {
+	id: uuid('id').defaultRandom().primaryKey(),
+	taskId: uuid('task_id')
+		.notNull()
+		.references(() => task.id, { onDelete: 'cascade' }),
+	userId: uuid('user_id')
+		.notNull()
+		.references(() => user.id, { onDelete: 'cascade' }),
+	startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+	endedAt: timestamp('ended_at', { withTimezone: true }),
+	endReason: taskExecutionEndReasonEnum('end_reason'),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+});
+
 // ---------------------------------------------------------------------------
 // Relations
 // ---------------------------------------------------------------------------
@@ -206,7 +227,8 @@ export const userRelations = relations(user, ({ many }) => ({
 	groupMemberships: many(groupMember),
 	ownedTasks: many(task, { relationName: 'taskOwner' }),
 	createdTasks: many(task, { relationName: 'taskCreator' }),
-	uploadedFiles: many(file)
+	uploadedFiles: many(file),
+	taskExecutions: many(taskExecution)
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -250,10 +272,16 @@ export const taskRelations = relations(task, ({ one, many }) => ({
 		references: [user.id],
 		relationName: 'taskCreator'
 	}),
-	files: many(file)
+	files: many(file),
+	executions: many(taskExecution)
 }));
 
 export const fileRelations = relations(file, ({ one }) => ({
 	task: one(task, { fields: [file.taskId], references: [task.id] }),
 	uploader: one(user, { fields: [file.uploadedBy], references: [user.id] })
+}));
+
+export const taskExecutionRelations = relations(taskExecution, ({ one }) => ({
+	task: one(task, { fields: [taskExecution.taskId], references: [task.id] }),
+	user: one(user, { fields: [taskExecution.userId], references: [user.id] })
 }));

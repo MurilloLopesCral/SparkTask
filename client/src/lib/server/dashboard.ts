@@ -1,6 +1,6 @@
-﻿import { and, count, eq, gte, inArray, lt, sql } from 'drizzle-orm';
+﻿import { and, count, eq, gte, inArray, isNotNull, lt, sql } from 'drizzle-orm';
 import { db } from './db';
-import { groupMember, project, task } from './db/schema';
+import { groupMember, project, task, taskExecution } from './db/schema';
 
 const PENDING_STATUSES = ['not_started', 'in_progress', 'stand_by'] as const;
 /** Literal — keeps SELECT/GROUP BY identical (bound params get distinct $N and break GROUP BY). */
@@ -133,7 +133,8 @@ export async function getHomeDashboard(userId: string) {
 		weekDoneRows,
 		monthlyRows,
 		tasksByProjectRows,
-		currentMonthDailyRows
+		currentMonthDailyRows,
+		resolutionRows
 	] = await Promise.all([
 		db
 			.select({ value: count() })
@@ -221,13 +222,30 @@ export async function getHomeDashboard(userId: string) {
 					lt(task.updatedAt, nextMonthStart)
 				)
 			)
-			.groupBy(dayBucket, task.projectId)
+			.groupBy(dayBucket, task.projectId),
+		db
+			.select({
+				taskId: taskExecution.taskId,
+				startedAt: taskExecution.startedAt,
+				endedAt: taskExecution.endedAt
+			})
+			.from(taskExecution)
+			.innerJoin(task, eq(task.id, taskExecution.taskId))
+			.where(
+				and(
+					inArray(task.projectId, projectIds),
+					eq(taskExecution.userId, userId),
+					eq(task.status, 'done'),
+					isNotNull(taskExecution.endedAt)
+				)
+			)
 	]);
 
 	const pendingTasks = Number(pendingRow?.value ?? 0);
 	const completedThisMonth = Number(doneMonthRow?.value ?? 0);
 	const weekdayElapsed = countWeekdaysElapsed(now);
 	const dailyAverage = Math.round((completedThisMonth / weekdayElapsed) * 10) / 10;
+	const averageResolutionSeconds = averageResolutionSecondsFromRows(resolutionRows);
 
 	const doneByDay = new Map(
 		weekDoneRows.map((r) => [r.dayKey, Number(r.value)])
@@ -272,6 +290,7 @@ export async function getHomeDashboard(userId: string) {
 			pendingTasks,
 			completedThisMonth,
 			dailyAverage,
+			averageResolutionSeconds,
 			weekProgress
 		},
 		groupStats: {
@@ -288,6 +307,22 @@ export async function getHomeDashboard(userId: string) {
 	};
 }
 
+/** Mean worked time per done task (sum of closed executions for the user). */
+function averageResolutionSecondsFromRows(
+	rows: { taskId: string; startedAt: Date; endedAt: Date | null }[]
+) {
+	const byTask = new Map<string, number>();
+	for (const row of rows) {
+		if (!row.endedAt) continue;
+		const seconds = (row.endedAt.getTime() - row.startedAt.getTime()) / 1000;
+		if (seconds < 0) continue;
+		byTask.set(row.taskId, (byTask.get(row.taskId) ?? 0) + seconds);
+	}
+	if (byTask.size === 0) return null;
+	const total = [...byTask.values()].reduce((sum, n) => sum + n, 0);
+	return Math.round(total / byTask.size);
+}
+
 function emptyDashboard(projects: { id: string; name: string; groupId: string }[]) {
 	const now = new Date();
 	const weekDays = workWeekDays(now);
@@ -296,6 +331,7 @@ function emptyDashboard(projects: { id: string; name: string; groupId: string }[
 			pendingTasks: 0,
 			completedThisMonth: 0,
 			dailyAverage: 0,
+			averageResolutionSeconds: null as number | null,
 			weekProgress: weekDays.map((d, i) => ({
 				day: WEEKDAY_LABELS[i],
 				dateKey: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,

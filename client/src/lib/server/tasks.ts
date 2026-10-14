@@ -64,7 +64,15 @@ export async function getVisibleTasks(userId: string, filters: TaskFilters = {})
 			project: true,
 			owner: true,
 			creator: true,
-			files: { with: { uploader: true }, orderBy: (file, { desc }) => [desc(file.createdAt)] }
+			files: { with: { uploader: true }, orderBy: (file, { desc }) => [desc(file.createdAt)] },
+			// Open timer for the caller — at most one row (endedAt IS NULL).
+			executions: {
+				where: (execution, { and, eq, isNull }) =>
+					and(eq(execution.userId, userId), isNull(execution.endedAt)),
+				orderBy: (execution, { desc }) => [desc(execution.startedAt)],
+				limit: 1,
+				columns: { id: true, startedAt: true, userId: true }
+			}
 		}
 	});
 }

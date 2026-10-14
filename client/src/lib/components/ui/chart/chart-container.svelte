@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { cn, type WithElementRef } from "$lib/utils.js";
 	import ChartStyle from "./chart-style.svelte";
 	import { setChartContext, type ChartConfig } from "./chart-utils.js";
@@ -36,8 +36,8 @@
 		//
 		// Stroke around dots/marks when hovering
 		"[&_.lc-highlight-point]:stroke-transparent",
-		// override the default stroke color of lines
-		"[&_.lc-line]:stroke-border/50",
+		// Solid ink-forward strokes — mesh is already light; half-opacity lines disappear.
+		"[&_.lc-line]:stroke-foreground [&_.lc-spline-path]:opacity-100 [&_.lc-line]:opacity-100",
 
 		// by default, layerchart shows a line intersecting the point when hovering, this hides that
 		"[&_.lc-highlight-line]:stroke-0",

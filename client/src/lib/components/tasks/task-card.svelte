@@ -20,6 +20,11 @@
 	import { formatDate, dueDateStatusClass } from '$lib/tasks/format';
 	import { getInitials } from '$lib/users/format';
 	import { setTaskStatus, removeTask } from '$lib/tasks/api';
+	import {
+		finishTaskExecution,
+		pauseTaskExecution,
+		startTaskExecution
+	} from '$lib/tasks/execution-api';
 	import type { FileUploadConfig } from '$lib/tasks/files-api';
 	import type { VisibleTask } from '$lib/server/tasks';
 
@@ -43,11 +48,16 @@
 
 	let detailsOpen = $state(false);
 	let startEditing = $state(false);
+	let busyAction = $state<'start' | 'pause' | 'finish' | null>(null);
 
 	const dueDate = $derived(formatDate(task.dueDate));
 	const dueDateClass = $derived(dueDateStatusClass(task.dueDate));
 	const ownerName = $derived(task.owner?.name || task.owner?.email || 'Sem responsável');
 	const ownerInitials = $derived(task.owner ? getInitials(task.owner.name, task.owner.email) : '—');
+
+	const canExecute = $derived(task.status !== 'done' && task.status !== 'cancelled');
+	const activeExecution = $derived(task.executions[0] ?? null);
+	const isRunning = $derived(Boolean(activeExecution));
 
 	function openDetails() {
 		startEditing = false;
@@ -57,6 +67,18 @@
 	function openForEditing() {
 		startEditing = true;
 		detailsOpen = true;
+	}
+
+	async function runExecution(action: 'start' | 'pause' | 'finish') {
+		if (busyAction) return;
+		busyAction = action;
+		try {
+			if (action === 'start') await startTaskExecution(task.id);
+			else if (action === 'pause') await pauseTaskExecution(task.id);
+			else await finishTaskExecution(task.id);
+		} finally {
+			busyAction = null;
+		}
 	}
 </script>
 
@@ -136,7 +158,50 @@
 				>{TASK_PRIORITY_META[task.priority].label}</Badge
 			>
 			<Badge variant="outline" class="badge-sticker">{TASK_TYPE_META[task.type].label}</Badge>
+			{#if isRunning}
+				<span
+					class="border border-frame bg-sticker-yellow px-xs py-xxs font-sans text-[10px] font-bold tracking-wide text-ink uppercase"
+				>
+					Em execução
+				</span>
+			{/if}
 		</div>
+
+		{#if canExecute}
+			<div
+				role="presentation"
+				onclick={(e) => e.stopPropagation()}
+				class="flex flex-wrap gap-xs border-t border-frame/20 pt-sm"
+			>
+				{#if !isRunning}
+					<button
+						type="button"
+						class="btn-primary min-h-11 flex-1 px-sm py-xs text-[11px] sm:flex-none"
+						disabled={busyAction !== null}
+						onclick={() => runExecution('start')}
+					>
+						{busyAction === 'start' ? 'Iniciando…' : 'Iniciar'}
+					</button>
+				{:else}
+					<button
+						type="button"
+						class="btn-secondary min-h-11 flex-1 px-sm py-xs text-[11px]"
+						disabled={busyAction !== null}
+						onclick={() => runExecution('pause')}
+					>
+						{busyAction === 'pause' ? 'Pausando…' : 'Pausar'}
+					</button>
+					<button
+						type="button"
+						class="btn-primary min-h-11 flex-1 px-sm py-xs text-[11px]"
+						disabled={busyAction !== null}
+						onclick={() => runExecution('finish')}
+					>
+						{busyAction === 'finish' ? 'Finalizando…' : 'Finalizar'}
+					</button>
+				{/if}
+			</div>
+		{/if}
 
 		<div
 			class="flex items-center justify-between gap-sm font-serif text-caption text-muted-foreground"

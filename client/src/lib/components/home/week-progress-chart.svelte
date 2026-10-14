@@ -46,7 +46,7 @@
 	<Card.Content class="chart-mesh p-md">
 		<Chart.Container
 			config={chartConfig}
-			class="aspect-auto h-52 w-full [&_.lc-grid-x-line]:stroke-frame/25 [&_.lc-grid-y-line]:stroke-frame/25 [&_.lc-highlight-point]:fill-[var(--chart-1)] [&_.lc-spline-path]:stroke-[var(--chart-1)]"
+			class="aspect-auto h-52 w-full [&_.lc-grid-x-line]:stroke-frame/15 [&_.lc-grid-y-line]:stroke-frame/15 [&_.lc-highlight-point]:fill-[var(--chart-1)] [&_.lc-line]:stroke-[var(--chart-1)] [&_.lc-spline-path]:stroke-[var(--chart-1)]"
 		>
 			<LineChart
 				data={chartData}
