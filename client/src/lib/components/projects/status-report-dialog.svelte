@@ -162,12 +162,16 @@
 	}
 
 	async function handleExportPdf() {
-		if (!report || !reportEl) return;
+		if (!report || !reportEl) {
+			toast.error('Prévia do relatório ainda não está pronta.');
+			return;
+		}
 		exporting = true;
 		try {
 			await downloadStatusReportPdf(reportEl, report);
 			toast.success('PDF baixado.');
-		} catch {
+		} catch (err) {
+			console.error('status-report pdf', err);
 			toast.error('Não foi possível exportar o PDF.');
 		} finally {
 			exporting = false;

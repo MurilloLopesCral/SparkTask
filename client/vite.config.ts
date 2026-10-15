@@ -45,13 +45,14 @@ export default defineConfig({
 				]
 			},
 			workbox: {
-				navigateFallback: '/',
+				// Avoid `createHandlerBoundToURL('/')` when `/` is not precached
+				// (common in SvelteKit/dev → Uncaught non-precached-url).
+				navigateFallbackDenylist: [/\.pdf$/i],
 				globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,webmanifest}']
 			},
 			devOptions: {
 				enabled: true,
-				type: 'module',
-				navigateFallback: '/'
+				type: 'module'
 			},
 			kit: {
 				includeVersionFile: true
