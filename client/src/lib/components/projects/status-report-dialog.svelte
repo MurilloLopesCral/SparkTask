@@ -3,7 +3,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { toast } from 'svelte-sonner';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
-	import { Download01Icon, File01Icon } from '@hugeicons/core-free-icons';
+	import { File01Icon, PrinterIcon } from '@hugeicons/core-free-icons';
 	import StatusReportDocument from './status-report-document.svelte';
 	import MarkdownToolbar from '$lib/components/tasks/markdown-toolbar.svelte';
 	import {
@@ -11,7 +11,10 @@
 		type StatusReportPayload,
 		type StatusReportPeriodPreset
 	} from '$lib/projects/status-report';
-	import { downloadStatusReportPdf } from '$lib/projects/status-report-pdf';
+	import {
+		stashStatusReportForPrint,
+		statusReportPrintUrl
+	} from '$lib/projects/status-report-print';
 	import {
 		TASK_KINDS,
 		TASK_STATUSES,
@@ -49,9 +52,7 @@
 	let observationsEl = $state<HTMLTextAreaElement | null>(null);
 	let loadingTasks = $state(false);
 	let generating = $state(false);
-	let exporting = $state(false);
 	let report = $state<StatusReportPayload | null>(null);
-	let reportEl = $state<HTMLElement | null>(null);
 
 	const period = $derived(resolvePeriodPreset(periodPreset, customFrom, customTo));
 
@@ -161,20 +162,16 @@
 		}
 	}
 
-	async function handleExportPdf() {
-		if (!report || !reportEl) {
+	function handleOpenPrintable() {
+		if (!report) {
 			toast.error('Prévia do relatório ainda não está pronta.');
 			return;
 		}
-		exporting = true;
-		try {
-			await downloadStatusReportPdf(reportEl, report);
-			toast.success('PDF baixado.');
-		} catch (err) {
-			console.error('status-report pdf', err);
-			toast.error('Não foi possível exportar o PDF.');
-		} finally {
-			exporting = false;
+		const id = stashStatusReportForPrint(report);
+		const opened = window.open(statusReportPrintUrl(id), '_blank', 'noopener,noreferrer');
+		if (!opened) {
+			toast.error('O navegador bloqueou a nova aba. Permita pop-ups para este site.');
+			return;
 		}
 	}
 </script>
@@ -188,9 +185,9 @@
 			<Dialog.Title class="font-display text-h1 uppercase">Status Report</Dialog.Title>
 			<Dialog.Description class="font-serif text-body-sm">
 				{#if step === 'filters'}
-					Monte o recorte de “{project.name}” e gere um PDF para compartilhar.
+					Monte o recorte de “{project.name}” e abra uma versão imprimível no navegador.
 				{:else}
-					Prévia do relatório — confira e baixe o PDF.
+					Prévia do relatório — confira e abra para imprimir (ou salvar como PDF).
 				{/if}
 			</Dialog.Description>
 		</Dialog.Header>
@@ -296,7 +293,7 @@
 						<div>
 							<span class="font-sans text-ui-label uppercase">Tarefas específicas</span>
 							<p class="font-serif text-caption text-muted-foreground">
-								Opcional — escolha só o que entra no PDF.
+								Opcional — escolha só o que entra no relatório.
 							</p>
 						</div>
 						<button
@@ -366,7 +363,7 @@
 				<section class="flex flex-col gap-xs border-t border-frame pt-md">
 					<span class="font-sans text-ui-label uppercase">Observações adicionais</span>
 					<p class="font-serif text-caption text-muted-foreground">
-						Texto livre no PDF, entre o progresso e a lista de tarefas. Aceita Markdown.
+						Texto livre no relatório, entre o progresso e a lista de tarefas. Aceita Markdown.
 					</p>
 					<div>
 						<MarkdownToolbar bind:value={observations} bind:textareaEl={observationsEl} />
@@ -392,16 +389,16 @@
 			</Dialog.Footer>
 		{:else if report}
 			<div class="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-muted/40 p-sm sm:p-md">
-				<StatusReportDocument {report} bind:reportEl />
+				<StatusReportDocument {report} />
 			</div>
 
 			<Dialog.Footer class="shrink-0 flex-col gap-sm sm:flex-row sm:justify-between">
 				<Button type="button" variant="outline" onclick={() => (step = 'filters')}>
 					Voltar aos filtros
 				</Button>
-				<Button type="button" disabled={exporting} onclick={handleExportPdf}>
-					<HugeiconsIcon icon={Download01Icon} strokeWidth={2} data-icon="inline-start" />
-					{exporting ? 'Exportando…' : 'Baixar PDF'}
+				<Button type="button" onclick={handleOpenPrintable}>
+					<HugeiconsIcon icon={PrinterIcon} strokeWidth={2} data-icon="inline-start" />
+					Abrir para imprimir
 				</Button>
 			</Dialog.Footer>
 		{/if}

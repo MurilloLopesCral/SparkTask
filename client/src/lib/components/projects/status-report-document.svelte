@@ -10,11 +10,9 @@
 	import MarkdownDescription from '$lib/components/tasks/markdown-description.svelte';
 
 	let {
-		report,
-		reportEl = $bindable<HTMLElement | null>(null)
+		report
 	}: {
 		report: StatusReportPayload;
-		reportEl?: HTMLElement | null;
 	} = $props();
 
 	const progress = $derived(Math.min(100, Math.max(0, report.summary.progressPercent)));
@@ -23,7 +21,6 @@
 </script>
 
 <article
-	bind:this={reportEl}
 	class="status-report-doc w-full max-w-[210mm] bg-canvas text-ink"
 	aria-label="Status report de {report.project.name}"
 >

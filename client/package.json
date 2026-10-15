@@ -64,8 +64,6 @@
 		"@lucide/svelte": "^1.45.0",
 		"better-auth": "^1.7.2",
 		"cloudinary": "^2.11.0",
-		"html2canvas": "^1.4.1",
-		"jspdf": "^4.2.1",
 		"svelte-confetti": "^2.3.2",
 		"svelte-markdown": "^0.4.1",
 		"svelte-sonner": "^1.2.1",
