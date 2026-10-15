@@ -16,34 +16,44 @@
 	let imageUrl = $state<string | null>(project.image ?? null);
 	let pendingFile = $state<File | null>(null);
 	let cleared = $state(false);
+	let wasOpen = false;
 
 	function toFormState(p: VisibleProject) {
 		return { name: p.name, description: p.description ?? '' };
 	}
 
+	// Seed only when the sheet opens — not when `project` refreshes mid-save
+	// (updateProject → invalidateAll would otherwise wipe pendingFile).
 	$effect(() => {
-		if (open) {
+		if (open && !wasOpen) {
 			form = toFormState(project);
 			imageUrl = project.image ?? null;
 			pendingFile = null;
 			cleared = false;
 		}
+		wasOpen = open;
 	});
 
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
 		if (!form.name.trim()) return;
 
+		const fileToUpload = pendingFile;
+		const shouldClear = cleared && Boolean(project.image);
+
 		submitting = true;
 		try {
+			// Image first, while we still hold the File snapshot.
+			if (fileToUpload) {
+				const uploaded = await uploadProjectImage(project.id, fileToUpload, { quiet: true });
+				if (!uploaded) return;
+			} else if (shouldClear) {
+				const removed = await clearProjectImage(project.id, { quiet: true });
+				if (!removed) return;
+			}
+
 			const ok = await updateProject(project.id, form);
 			if (!ok) return;
-
-			if (pendingFile) {
-				await uploadProjectImage(project.id, pendingFile, { quiet: true });
-			} else if (cleared && project.image) {
-				await clearProjectImage(project.id, { quiet: true });
-			}
 
 			open = false;
 		} finally {
