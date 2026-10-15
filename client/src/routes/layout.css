@@ -596,6 +596,22 @@
 			2px 2px 0 var(--frame);
 	}
 
+	/* Project catalog icon — beveled sticker photo, sized for badge/card contexts. */
+	.project-icon {
+		@apply size-5 shrink-0 border border-frame bg-muted object-cover;
+		box-shadow:
+			inset 1px 1px 0 rgb(255 255 255 / 0.55),
+			1px 1px 0 var(--frame);
+	}
+
+	.project-icon-md {
+		@apply size-10;
+	}
+
+	.project-icon-lg {
+		@apply size-16 border-0 shadow-none;
+	}
+
 	.cert-seal {
 		@apply grid size-16 place-items-center rounded-full bg-dell-red text-center font-sans text-button text-canvas;
 	}

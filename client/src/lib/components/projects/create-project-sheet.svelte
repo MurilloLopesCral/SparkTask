@@ -4,13 +4,17 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { Add01Icon } from '@hugeicons/core-free-icons';
-	import { createProject } from '$lib/projects/api';
+	import { createProject, uploadProjectImage } from '$lib/projects/api';
+	import ProjectImageField from './project-image-field.svelte';
 
 	let { groups }: { groups: { id: string; name: string }[] } = $props();
 
 	let open = $state(false);
 	let submitting = $state(false);
 	let form = $state(emptyForm());
+	let pendingFile = $state<File | null>(null);
+	let imageUrl = $state<string | null>(null);
+	let cleared = $state(false);
 
 	function emptyForm() {
 		return {
@@ -20,24 +24,43 @@
 		};
 	}
 
+	function resetImage() {
+		pendingFile = null;
+		imageUrl = null;
+		cleared = false;
+	}
+
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
 		if (!form.name.trim() || !form.groupId) return;
 
 		submitting = true;
 		try {
-			const res = await createProject(form);
-			if (res.ok) {
-				open = false;
-				form = emptyForm();
+			const result = await createProject(form);
+			if (!result.ok || !result.project) return;
+
+			if (pendingFile) {
+				await uploadProjectImage(result.project.id, pendingFile, { quiet: true });
 			}
+
+			open = false;
+			form = emptyForm();
+			resetImage();
 		} finally {
 			submitting = false;
 		}
 	}
 </script>
 
-<Sheet.Root bind:open>
+<Sheet.Root
+	bind:open
+	onOpenChange={(next) => {
+		if (!next) {
+			form = emptyForm();
+			resetImage();
+		}
+	}}
+>
 	<Sheet.Trigger>
 		{#snippet child({ props })}
 			<Button {...props}>
@@ -46,7 +69,7 @@
 			</Button>
 		{/snippet}
 	</Sheet.Trigger>
-	<Sheet.Content class="flex w-full flex-col sm:max-w-[24rem]">
+	<Sheet.Content class="flex w-full flex-col overscroll-contain sm:max-w-[24rem]">
 		<form onsubmit={handleSubmit} class="flex h-full flex-col">
 			<Sheet.Header>
 				<Sheet.Title>Novo projeto</Sheet.Title>
@@ -54,14 +77,33 @@
 			</Sheet.Header>
 
 			<div class="flex flex-1 flex-col gap-md overflow-y-auto px-lg">
+				<ProjectImageField
+					bind:imageUrl
+					bind:pendingFile
+					bind:cleared
+					projectName={form.name.trim() || 'Projeto'}
+				/>
+
 				<label class="flex flex-col gap-xxs">
 					<span class="font-sans text-ui-label uppercase">Nome</span>
-					<input class="text-input" bind:value={form.name} required />
+					<input
+						class="text-input"
+						name="projectName"
+						autocomplete="off"
+						bind:value={form.name}
+						required
+					/>
 				</label>
 
 				<label class="flex flex-col gap-xxs">
 					<span class="font-sans text-ui-label uppercase">Descrição</span>
-					<textarea class="text-input" rows="3" bind:value={form.description}></textarea>
+					<textarea
+						class="text-input"
+						name="projectDescription"
+						autocomplete="off"
+						rows="3"
+						bind:value={form.description}
+					></textarea>
 				</label>
 
 				<label class="flex flex-col gap-xxs">

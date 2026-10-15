@@ -15,6 +15,7 @@
 	import StatusBadge from './status-badge.svelte';
 	import TaskDetailsDialog from './task-details-dialog.svelte';
 	import TaskConfettiBurst from './task-confetti-burst.svelte';
+	import ProjectIcon from '$lib/components/projects/project-icon.svelte';
 	import { TASK_STATUSES, TASK_PRIORITY_META } from '$lib/tasks/constants';
 	import { formatDate, dueDateStatusClass } from '$lib/tasks/format';
 	import { getInitials } from '$lib/users/format';
@@ -87,7 +88,14 @@
 										)}
 									>
 										<Table.Cell class="font-sans font-medium">{task.title}</Table.Cell>
-										<Table.Cell>{task.project.name}</Table.Cell>
+										<Table.Cell>
+											<span class="flex min-w-0 items-center gap-xs">
+												{#if task.project.image}
+													<ProjectIcon src={task.project.image} alt="" size="sm" />
+												{/if}
+												<span class="min-w-0 truncate">{task.project.name}</span>
+											</span>
+										</Table.Cell>
 										<Table.Cell>
 											{#if task.owner}
 												<span class="flex items-center gap-xs">

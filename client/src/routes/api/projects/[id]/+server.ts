@@ -1,4 +1,4 @@
-import { error, json } from '@sveltejs/kit';
+﻿import { error, json } from '@sveltejs/kit';
 import { z } from 'zod';
 import { deleteProjectById, updateProjectFields, userCanAccessProject } from '$lib/server/projects';
 import type { RequestHandler } from './$types';
@@ -6,7 +6,8 @@ import type { RequestHandler } from './$types';
 const patchProjectSchema = z
 	.object({
 		name: z.string().min(1).max(255),
-		description: z.string().nullable()
+		description: z.string().nullable(),
+		image: z.string().url().nullable()
 	})
 	.partial();
 

@@ -60,7 +60,7 @@ export async function buildProjectStatusReport(
 	const projectRow = await db.query.project.findFirst({
 		where: (p, { eq: e }) => e(p.id, filters.projectId),
 		with: { group: { columns: { name: true } } },
-		columns: { id: true, name: true }
+		columns: { id: true, name: true, image: true }
 	});
 
 	if (!projectRow) {
@@ -132,7 +132,8 @@ export async function buildProjectStatusReport(
 		project: {
 			id: projectRow.id,
 			name: projectRow.name,
-			groupName: projectRow.group.name
+			groupName: projectRow.group.name,
+			image: projectRow.image ?? null
 		},
 		generatedAt: new Date().toISOString(),
 		period: {

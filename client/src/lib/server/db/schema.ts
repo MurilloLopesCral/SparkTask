@@ -159,6 +159,8 @@ export const project = pgTable('project', {
 	id: uuid('id').defaultRandom().primaryKey(),
 	name: varchar('name', { length: 255 }).notNull(),
 	description: text('description'),
+	/** Cloudinary URL for the project icon (catalog sticker photo). */
+	image: text('image'),
 	isActive: boolean('is_active').notNull().default(true),
 	groupId: uuid('group_id')
 		.notNull()

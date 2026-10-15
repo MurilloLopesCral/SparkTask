@@ -41,7 +41,7 @@ export type StatusReportTaskRow = {
 };
 
 export type StatusReportPayload = {
-	project: { id: string; name: string; groupName: string };
+	project: { id: string; name: string; groupName: string; image: string | null };
 	generatedAt: string;
 	period: { from: string | null; to: string | null; label: string };
 	filters: {

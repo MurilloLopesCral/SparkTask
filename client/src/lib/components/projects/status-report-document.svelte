@@ -8,6 +8,7 @@
 	} from '$lib/projects/status-report';
 	import { TASK_KIND_META, TASK_STATUS_META } from '$lib/tasks/constants';
 	import MarkdownDescription from '$lib/components/tasks/markdown-description.svelte';
+	import ProjectIcon from './project-icon.svelte';
 
 	let {
 		report
@@ -26,11 +27,23 @@
 >
 	<header class="border-b-2 border-frame pb-md">
 		<p class="font-sans text-ui-label tracking-wide text-dell-red uppercase">SparkTask</p>
-		<h1 class="font-display text-display text-pretty uppercase">Status Report</h1>
-		<p class="mt-xs font-sans text-h2 uppercase">Projeto {report.project.name}</p>
-		<p class="font-serif text-caption text-muted-foreground">
-			{report.project.groupName} · {report.period.label}
-		</p>
+		<div class="mt-xs flex items-start gap-md">
+			{#if report.project.image}
+				<ProjectIcon
+					src={report.project.image}
+					alt={`Ícone de ${report.project.name}`}
+					size="lg"
+					loading="eager"
+				/>
+			{/if}
+			<div class="min-w-0">
+				<h1 class="font-display text-display text-pretty uppercase">Status Report</h1>
+				<p class="mt-xs font-sans text-h2 uppercase">Projeto {report.project.name}</p>
+				<p class="font-serif text-caption text-muted-foreground">
+					{report.project.groupName} · {report.period.label}
+				</p>
+			</div>
+		</div>
 	</header>
 
 	<section class="mt-lg border-2 border-frame bg-canvas p-md">

@@ -11,6 +11,7 @@
 	} from '@hugeicons/core-free-icons';
 	import EditProjectSheet from './edit-project-sheet.svelte';
 	import StatusReportDialog from './status-report-dialog.svelte';
+	import ProjectIcon from './project-icon.svelte';
 	import { removeProject } from '$lib/projects/api';
 	import type { VisibleProject } from '$lib/server/projects';
 
@@ -50,8 +51,15 @@
 	</div>
 
 	<Card.Header>
-		<Card.Title class="pr-8 font-sans text-h3 uppercase">{project.name}</Card.Title>
-		<Card.Description>{project.group.name}</Card.Description>
+		<div class="flex items-start gap-sm pr-8">
+			{#if project.image}
+				<ProjectIcon src={project.image} alt={`Ícone de ${project.name}`} size="md" />
+			{/if}
+			<div class="min-w-0 flex-1">
+				<Card.Title class="font-sans text-h3 uppercase text-pretty">{project.name}</Card.Title>
+				<Card.Description>{project.group.name}</Card.Description>
+			</div>
+		</div>
 	</Card.Header>
 	<Card.Content class="flex flex-col gap-sm">
 		{#if project.description}

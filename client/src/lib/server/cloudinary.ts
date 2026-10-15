@@ -1,4 +1,4 @@
-import { v2 as cloudinary, type UploadApiResponse } from 'cloudinary';
+﻿import { v2 as cloudinary, type UploadApiResponse } from 'cloudinary';
 import { env } from '$env/dynamic/private';
 
 function requireEnv(name: string) {
@@ -57,14 +57,15 @@ export function resourceTypeForExtension(extension: string): 'image' | 'video' |
 export async function uploadToCloudinary(
 	buffer: Buffer,
 	filename: string,
-	resourceType: 'image' | 'video' | 'raw'
+	resourceType: 'image' | 'video' | 'raw',
+	folder?: string
 ) {
 	ensureConfigured();
 
 	return new Promise<UploadApiResponse>((resolve, reject) => {
 		const stream = cloudinary.uploader.upload_stream(
 			{
-				folder: requireEnv('CLOUDINARY_FOLDER'),
+				folder: folder ?? requireEnv('CLOUDINARY_FOLDER'),
 				resource_type: resourceType,
 				filename_override: filename,
 				use_filename: true,
@@ -78,6 +79,9 @@ export async function uploadToCloudinary(
 		stream.end(buffer);
 	});
 }
+
+/** Root-level Cloudinary folder for project icons. */
+export const PROJECT_PHOTOS_FOLDER = 'projectPhotos';
 
 export async function deleteFromCloudinary(
 	publicId: string,

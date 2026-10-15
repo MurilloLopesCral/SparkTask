@@ -20,6 +20,7 @@
 	import KindBadge from './kind-badge.svelte';
 	import TaskDetailsDialog from './task-details-dialog.svelte';
 	import TaskConfettiBurst from './task-confetti-burst.svelte';
+	import ProjectIcon from '$lib/components/projects/project-icon.svelte';
 	import { TASK_STATUSES, TASK_PRIORITY_META, TASK_TYPE_META } from '$lib/tasks/constants';
 	import { formatDate, dueDateStatusClass } from '$lib/tasks/format';
 	import { getInitials } from '$lib/users/format';
@@ -104,7 +105,18 @@
 			: 'cursor-pointer'}"
 	>
 		<div class="flex items-center justify-between gap-sm">
-			<Badge variant="outline" class="badge-sticker w-fit">{task.project.name}</Badge>
+			<div class="flex min-w-0 items-center gap-xs">
+				{#if task.project.image}
+					<ProjectIcon
+						src={task.project.image}
+						alt=""
+						size="sm"
+					/>
+				{/if}
+				<Badge variant="outline" class="badge-sticker w-fit max-w-full truncate"
+					>{task.project.name}</Badge
+				>
+			</div>
 			<KindBadge kind={task.kind} />
 		</div>
 

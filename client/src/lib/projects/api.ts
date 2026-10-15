@@ -1,4 +1,4 @@
-import { invalidateAll } from '$app/navigation';
+﻿import { invalidateAll } from '$app/navigation';
 import { toast } from 'svelte-sonner';
 
 export interface CreateProjectValues {
@@ -17,15 +17,19 @@ export async function createProject(values: CreateProjectValues) {
 			groupId: values.groupId
 		})
 	});
+	const data = await res.json().catch(() => ({}));
 	await invalidateAll();
 
 	if (!res.ok) {
-		const data = await res.json().catch(() => ({}));
 		toast.error(data.message ?? 'Não foi possível criar o projeto.');
-	} else {
-		toast.success('Projeto criado.');
+		return { ok: false as const, project: null };
 	}
-	return res;
+
+	toast.success('Projeto criado.');
+	return {
+		ok: true as const,
+		project: data.project as { id: string; name: string; image: string | null }
+	};
 }
 
 export interface ProjectFormValues {
@@ -46,6 +50,38 @@ export async function updateProject(projectId: string, values: ProjectFormValues
 		return false;
 	}
 	toast.success('Projeto atualizado.');
+	return true;
+}
+
+export async function uploadProjectImage(
+	projectId: string,
+	file: File,
+	options: { quiet?: boolean } = {}
+) {
+	const form = new FormData();
+	form.set('file', file);
+
+	const res = await fetch(`/api/projects/${projectId}/image`, { method: 'POST', body: form });
+	await invalidateAll();
+
+	if (!res.ok) {
+		const data = await res.json().catch(() => ({}));
+		toast.error(data.message ?? 'Não foi possível enviar a imagem do projeto.');
+		return false;
+	}
+	if (!options.quiet) toast.success('Imagem do projeto atualizada.');
+	return true;
+}
+
+export async function clearProjectImage(projectId: string, options: { quiet?: boolean } = {}) {
+	const res = await fetch(`/api/projects/${projectId}/image`, { method: 'DELETE' });
+	await invalidateAll();
+
+	if (!res.ok) {
+		toast.error('Não foi possível remover a imagem do projeto.');
+		return false;
+	}
+	if (!options.quiet) toast.success('Imagem do projeto removida.');
 	return true;
 }
 

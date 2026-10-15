@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+﻿import { and, eq, inArray } from 'drizzle-orm';
 import { db } from './db';
 import { groupMember, project } from './db/schema';
 
@@ -60,6 +60,7 @@ export async function createProject(input: CreateProjectInput) {
 export interface ProjectUpdateFields {
 	name?: string;
 	description?: string | null;
+	image?: string | null;
 }
 
 export async function updateProjectFields(projectId: string, fields: ProjectUpdateFields) {
@@ -67,6 +68,10 @@ export async function updateProjectFields(projectId: string, fields: ProjectUpda
 		.update(project)
 		.set({ ...fields, updatedAt: new Date() })
 		.where(eq(project.id, projectId));
+}
+
+export async function setProjectImage(projectId: string, image: string | null) {
+	await updateProjectFields(projectId, { image });
 }
 
 export async function deleteProjectById(projectId: string) {
