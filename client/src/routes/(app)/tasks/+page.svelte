@@ -16,7 +16,6 @@
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { FilterIcon, PauseIcon, RefreshIcon, Search01Icon } from '@hugeicons/core-free-icons';
 	import * as Field from '$lib/components/ui/field/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
 	import TaskTable from '$lib/components/tasks/task-table.svelte';
 	import TaskKanban from '$lib/components/tasks/task-kanban.svelte';
 	import TaskList from '$lib/components/tasks/task-list.svelte';
@@ -243,33 +242,33 @@
 		: 'p-md pb-[max(1rem,env(safe-area-inset-bottom))] md:p-lg lg:p-section'}
 >
 	<div
-		class="mb-lg flex flex-col gap-md lg:flex-row lg:items-center lg:gap-md"
+		class="mb-lg flex flex-col gap-lg xl:grid xl:grid-cols-[auto_minmax(16rem,1fr)_auto] xl:items-center xl:gap-xl"
 	>
 		<h1 class="shrink-0 font-display text-h1 text-pretty uppercase">Tarefas</h1>
 
-		<Field.Field orientation="vertical" class="min-w-0 flex-1 gap-0 lg:max-w-md xl:max-w-xl">
+		<Field.Field orientation="vertical" class="w-full min-w-0 gap-0">
 			<Field.Label for="tasks-search" class="sr-only">Buscar tarefas</Field.Label>
-			<div class="relative">
+			<div class="relative w-full">
 				<HugeiconsIcon
 					icon={Search01Icon}
 					strokeWidth={2}
 					class="pointer-events-none absolute top-1/2 left-sm size-4 -translate-y-1/2 text-muted-foreground"
 					aria-hidden="true"
 				/>
-				<Input
+				<input
 					id="tasks-search"
 					type="search"
 					name="search"
 					autocomplete="off"
-					spellcheck={false}
+					spellcheck="false"
 					placeholder="Buscar por título ou descrição…"
-					class="text-input min-h-11 rounded-none border-frame bg-canvas ps-xl focus-visible:ring-frame"
+					class="text-input w-full min-h-11 ps-xl"
 					bind:value={searchInput}
 				/>
 			</div>
 		</Field.Field>
 
-		<div class="flex w-full flex-wrap items-center gap-sm lg:w-auto lg:shrink-0 sm:gap-md">
+		<div class="flex w-full flex-wrap items-center gap-sm sm:gap-md xl:w-auto xl:justify-end">
 			<Select.Root type="single" value={projectFilter} onValueChange={setProjectFilter}>
 				<Select.Trigger class="min-h-11 w-full sm:w-48">{selectedProjectName}</Select.Trigger>
 				<Select.Content>
