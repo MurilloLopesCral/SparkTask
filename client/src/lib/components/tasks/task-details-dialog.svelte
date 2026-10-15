@@ -96,17 +96,19 @@
 	const ownerName = $derived(task.owner?.name || task.owner?.email || 'Sem responsável');
 	const creatorName = $derived(task.creator.name || task.creator.email);
 
-	// Re-seed the draft and enter/skip edit mode whenever the dialog is (re)opened —
-	// keeps a single effect at the open boundary instead of scattering resets
-	// across every place that could trigger opening.
+	// Seed draft/edit mode only when the dialog opens — not when `task` refreshes
+	// from the 30s poll / invalidateAll (that was wiping in-progress edits).
+	let wasOpen = false;
 	$effect(() => {
-		if (open) {
+		if (open && !wasOpen) {
 			form = toFormState(task);
 			viewDescription = task.description ?? '';
 			editing = initialEditing;
 		}
+		wasOpen = open;
 	});
 
+	// Keep view-mode description in sync with live task data (polls, todo toggles).
 	$effect(() => {
 		if (!editing && !togglingTodo) {
 			viewDescription = task.description ?? '';
