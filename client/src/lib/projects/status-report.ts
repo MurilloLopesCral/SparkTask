@@ -76,7 +76,12 @@ export type StatusReportPayload = {
 	tasks: StatusReportTaskRow[];
 };
 
-const PENDING: TaskStatus[] = ['not_started', 'in_progress', 'stand_by'];
+const PENDING: TaskStatus[] = [
+	'not_started',
+	'in_progress',
+	'stand_by',
+	'pending_validation'
+];
 
 export function computeStatusReportSummary(
 	tasks: { status: TaskStatus; resolutionSeconds?: number }[]

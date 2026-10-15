@@ -50,6 +50,13 @@
       "when": 1789237200000,
       "tag": "0006_project_image",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789323600000,
+      "tag": "0007_task_pending_validation",
+      "breakpoints": true
     }
   ]
 }

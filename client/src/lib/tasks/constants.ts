@@ -15,6 +15,11 @@ export const TASK_STATUSES: { value: TaskStatus; label: string; badgeClass: stri
 	{ value: 'not_started', label: 'Não iniciada', badgeClass: 'bg-tint-steel text-ink' },
 	{ value: 'in_progress', label: 'Em andamento', badgeClass: 'bg-tint-sky text-ink' },
 	{ value: 'stand_by', label: 'Em espera', badgeClass: 'bg-tint-peach text-ink' },
+	{
+		value: 'pending_validation',
+		label: 'Em Validação',
+		badgeClass: 'bg-tint-periwinkle text-ink'
+	},
 	{ value: 'done', label: 'Concluída', badgeClass: 'bg-tint-sage text-ink' },
 	{ value: 'cancelled', label: 'Cancelada', badgeClass: 'bg-dell-red text-on-red' }
 ];

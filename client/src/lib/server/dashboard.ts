@@ -2,7 +2,12 @@
 import { db } from './db';
 import { groupMember, project, task, taskExecution } from './db/schema';
 
-const PENDING_STATUSES = ['not_started', 'in_progress', 'stand_by'] as const;
+const PENDING_STATUSES = [
+	'not_started',
+	'in_progress',
+	'stand_by',
+	'pending_validation'
+] as const;
 /** Literal — keeps SELECT/GROUP BY identical (bound params get distinct $N and break GROUP BY). */
 const TZ_SQL = sql.raw("'America/Sao_Paulo'");
 const dayBucket = sql<string>`to_char((${task.updatedAt} AT TIME ZONE ${TZ_SQL}), 'YYYY-MM-DD')`;

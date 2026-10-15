@@ -35,6 +35,7 @@ export const taskStatusEnum = pgEnum('task_status', [
 	'not_started',
 	'in_progress',
 	'stand_by',
+	'pending_validation',
 	'done',
 	'cancelled'
 ]);
