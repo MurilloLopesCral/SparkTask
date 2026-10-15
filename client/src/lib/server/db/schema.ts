@@ -179,6 +179,8 @@ export const task = pgTable('task', {
 	type: taskTypeEnum('type').notNull(),
 	kind: taskKindEnum('kind').notNull().default('improvement'),
 	status: taskStatusEnum('status').notNull().default('not_started'),
+	/** Set when status becomes `done`; cleared if the task leaves done. */
+	finishedAt: timestamp('finished_at', { withTimezone: true }),
 	// Assignee — nullable: a task can sit unclaimed until someone picks it up.
 	ownerId: uuid('owner_id').references(() => user.id, { onDelete: 'set null' }),
 	createdBy: uuid('created_by')

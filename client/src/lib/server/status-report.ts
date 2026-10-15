@@ -104,7 +104,8 @@ export async function buildProjectStatusReport(
 			status: true,
 			priority: true,
 			kind: true,
-			dueDate: true
+			dueDate: true,
+			finishedAt: true
 		},
 		with: {
 			owner: { columns: { name: true, email: true } }
@@ -120,6 +121,7 @@ export async function buildProjectStatusReport(
 		priority: row.priority as StatusReportTaskRow['priority'],
 		kind: row.kind as StatusReportTaskRow['kind'],
 		dueDate: row.dueDate,
+		finishedAt: row.finishedAt,
 		ownerName: ownerDisplayName(row.owner),
 		resolutionSeconds: Math.round(resolutionByTask.get(row.id) ?? 0)
 	}));

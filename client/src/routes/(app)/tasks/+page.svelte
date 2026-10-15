@@ -14,7 +14,9 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Toggle } from '$lib/components/ui/toggle/index.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
-	import { FilterIcon, PauseIcon, RefreshIcon } from '@hugeicons/core-free-icons';
+	import { FilterIcon, PauseIcon, RefreshIcon, Search01Icon } from '@hugeicons/core-free-icons';
+	import * as Field from '$lib/components/ui/field/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
 	import TaskTable from '$lib/components/tasks/task-table.svelte';
 	import TaskKanban from '$lib/components/tasks/task-kanban.svelte';
 	import TaskList from '$lib/components/tasks/task-list.svelte';
@@ -29,6 +31,7 @@
 	const isMobile = new IsMobile();
 	const VIEW_STORAGE_KEY = 'sparktask:tasks-view';
 	const POLL_INTERVAL_MS = 30_000;
+	const SEARCH_DEBOUNCE_MS = 1_000;
 
 	function initialView() {
 		const fromUrl = page.url.searchParams.get('view');
@@ -47,8 +50,22 @@
 	let creatorFilter = $state(page.url.searchParams.get('creator') ?? 'all');
 	let statusFilter = $state(page.url.searchParams.get('status') ?? 'all');
 	let mineOnly = $state(page.url.searchParams.get('mine') === '1');
+	let searchInput = $state(page.url.searchParams.get('search') ?? '');
+	let searchFilter = $state(page.url.searchParams.get('search') ?? '');
 	let refreshing = $state(false);
 	let pausingAll = $state(false);
+
+	// Debounce search → URL + filter (accumulates with other filters).
+	$effect(() => {
+		const next = searchInput;
+		const timer = setTimeout(() => {
+			const trimmed = next.trim();
+			if (trimmed === searchFilter) return;
+			searchFilter = trimmed;
+			updateUrl({ search: trimmed || undefined });
+		}, SEARCH_DEBOUNCE_MS);
+		return () => clearTimeout(timer);
+	});
 
 	async function handleRefresh() {
 		refreshing = true;
@@ -204,6 +221,12 @@
 				return false;
 			if (dueFrom && (!t.dueDate || t.dueDate < dueFrom)) return false;
 			if (dueTo && (!t.dueDate || t.dueDate > dueTo)) return false;
+			if (searchFilter) {
+				const needle = searchFilter.toLocaleLowerCase('pt-BR');
+				const title = t.title.toLocaleLowerCase('pt-BR');
+				const description = (t.description ?? '').toLocaleLowerCase('pt-BR');
+				if (!title.includes(needle) && !description.includes(needle)) return false;
+			}
 			return true;
 		})
 	);
@@ -219,10 +242,34 @@
 		? 'flex h-[calc(100dvh-3.5rem-env(safe-area-inset-top))] flex-col p-md pb-[max(1rem,env(safe-area-inset-bottom))] md:p-lg lg:p-section'
 		: 'p-md pb-[max(1rem,env(safe-area-inset-bottom))] md:p-lg lg:p-section'}
 >
-	<div class="mb-lg flex flex-col gap-md sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-		<h1 class="font-display text-h1 text-pretty uppercase">Tarefas</h1>
+	<div
+		class="mb-lg flex flex-col gap-md lg:flex-row lg:items-center lg:gap-md"
+	>
+		<h1 class="shrink-0 font-display text-h1 text-pretty uppercase">Tarefas</h1>
 
-		<div class="flex w-full flex-wrap items-center gap-sm sm:w-auto sm:gap-md">
+		<Field.Field orientation="vertical" class="min-w-0 flex-1 gap-0 lg:max-w-md xl:max-w-xl">
+			<Field.Label for="tasks-search" class="sr-only">Buscar tarefas</Field.Label>
+			<div class="relative">
+				<HugeiconsIcon
+					icon={Search01Icon}
+					strokeWidth={2}
+					class="pointer-events-none absolute top-1/2 left-sm size-4 -translate-y-1/2 text-muted-foreground"
+					aria-hidden="true"
+				/>
+				<Input
+					id="tasks-search"
+					type="search"
+					name="search"
+					autocomplete="off"
+					spellcheck={false}
+					placeholder="Buscar por título ou descrição…"
+					class="text-input min-h-11 rounded-none border-frame bg-canvas ps-xl focus-visible:ring-frame"
+					bind:value={searchInput}
+				/>
+			</div>
+		</Field.Field>
+
+		<div class="flex w-full flex-wrap items-center gap-sm lg:w-auto lg:shrink-0 sm:gap-md">
 			<Select.Root type="single" value={projectFilter} onValueChange={setProjectFilter}>
 				<Select.Trigger class="min-h-11 w-full sm:w-48">{selectedProjectName}</Select.Trigger>
 				<Select.Content>

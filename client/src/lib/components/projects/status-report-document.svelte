@@ -1,5 +1,5 @@
 ﻿<script lang="ts">
-	import { formatDateTime, formatDuration } from '$lib/tasks/format';
+	import { formatDate, formatDateTime, formatDuration } from '$lib/tasks/format';
 	import {
 		kindLabel,
 		priorityLabel,
@@ -107,12 +107,13 @@
 	<section class="mt-lg overflow-x-auto border-2 border-frame">
 		<div class="min-w-160">
 		<div
-			class="grid grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_minmax(0,0.95fr)_minmax(0,0.85fr)_minmax(0,0.9fr)] gap-xs border-b-2 border-frame bg-frame px-sm py-xs font-sans text-[10px] font-bold tracking-wide text-canvas uppercase sm:text-ui-label"
+			class="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.75fr)_minmax(0,0.85fr)_minmax(0,0.85fr)] gap-xs border-b-2 border-frame bg-frame px-sm py-xs font-sans text-[10px] font-bold tracking-wide text-canvas uppercase sm:text-ui-label"
 		>
 			<span>Tarefa</span>
 			<span>Responsável</span>
 			<span>Status</span>
 			<span>Prioridade</span>
+			<span>Conclusão</span>
 			<span>Resolução</span>
 		</div>
 
@@ -124,7 +125,7 @@
 			<ul class="divide-y divide-frame">
 				{#each report.tasks as row (row.id)}
 					<li
-						class="grid grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_minmax(0,0.95fr)_minmax(0,0.85fr)_minmax(0,0.9fr)] gap-xs px-sm py-sm font-serif text-caption sm:text-body-sm"
+						class="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.75fr)_minmax(0,0.85fr)_minmax(0,0.85fr)] gap-xs px-sm py-sm font-serif text-caption sm:text-body-sm"
 					>
 						<div class="min-w-0">
 							<p class="truncate font-medium text-pretty">{row.title}</p>
@@ -147,6 +148,9 @@
 							</span>
 						</span>
 						<span>{priorityLabel(row.priority)}</span>
+						<span class="tabular-nums">
+							{row.finishedAt ? (formatDate(row.finishedAt) ?? '—') : '—'}
+						</span>
 						<span class="tabular-nums font-medium">
 							{row.resolutionSeconds > 0 ? formatDuration(row.resolutionSeconds) : '—'}
 						</span>

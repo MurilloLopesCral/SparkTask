@@ -34,6 +34,7 @@ export type StatusReportTaskRow = {
 	priority: TaskPriority;
 	kind: TaskKind;
 	dueDate: string | null;
+	finishedAt: string | Date | null;
 	ownerName: string;
 	/** Sum of execution intervals for this task (seconds). */
 	resolutionSeconds: number;

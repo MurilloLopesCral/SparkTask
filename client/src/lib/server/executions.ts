@@ -166,7 +166,7 @@ export async function finishExecution(taskId: string, userId: string) {
 
 	await db
 		.update(task)
-		.set({ status: 'done', updatedAt: new Date() })
+		.set({ status: 'done', finishedAt: new Date(), updatedAt: new Date() })
 		.where(eq(task.id, taskId));
 
 	return { ok: true as const, execution: closed };

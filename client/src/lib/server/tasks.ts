@@ -1,4 +1,4 @@
-﻿import { and, desc, eq, gte, ilike, inArray, lte, type SQL } from 'drizzle-orm';
+﻿import { and, desc, eq, gte, ilike, inArray, lte, or, type SQL } from 'drizzle-orm';
 import { db } from './db';
 import {
 	groupMember,
@@ -54,7 +54,12 @@ export async function getVisibleTasks(userId: string, filters: TaskFilters = {})
 	if (filters.status?.length) conditions.push(inArray(task.status, filters.status));
 	if (filters.priority?.length) conditions.push(inArray(task.priority, filters.priority));
 	if (filters.type?.length) conditions.push(inArray(task.type, filters.type));
-	if (filters.search) conditions.push(ilike(task.title, `%${filters.search}%`));
+	if (filters.search) {
+		const term = `%${escapeIlikePattern(filters.search.trim())}%`;
+		conditions.push(
+			or(ilike(task.title, term), ilike(task.description, term))!
+		);
+	}
 	if (filters.dueAfter) conditions.push(gte(task.dueDate, filters.dueAfter));
 	if (filters.dueBefore) conditions.push(lte(task.dueDate, filters.dueBefore));
 
@@ -79,6 +84,11 @@ export async function getVisibleTasks(userId: string, filters: TaskFilters = {})
 }
 
 export type VisibleTask = Awaited<ReturnType<typeof getVisibleTasks>>[number];
+
+/** Escape `%`, `_` and `\` so user input is matched literally in ILIKE. */
+function escapeIlikePattern(value: string) {
+	return value.replace(/[\\%_]/g, '\\$&');
+}
 
 export async function getVisibleProjects(userId: string) {
 	const projectIds = await getVisibleProjectIds(userId);
@@ -198,10 +208,23 @@ export interface TaskUpdateFields {
 }
 
 export async function updateTaskFields(taskId: string, fields: TaskUpdateFields) {
-	await db
-		.update(task)
-		.set({ ...fields, updatedAt: new Date() })
-		.where(eq(task.id, taskId));
+	const patch: TaskUpdateFields & {
+		updatedAt: Date;
+		finishedAt?: Date | null;
+	} = { ...fields, updatedAt: new Date() };
+
+	if (fields.status === 'done') {
+		const [current] = await db
+			.select({ finishedAt: task.finishedAt })
+			.from(task)
+			.where(eq(task.id, taskId))
+			.limit(1);
+		if (!current?.finishedAt) patch.finishedAt = new Date();
+	} else if (fields.status !== undefined) {
+		patch.finishedAt = null;
+	}
+
+	await db.update(task).set(patch).where(eq(task.id, taskId));
 }
 
 export async function deleteTaskById(taskId: string) {

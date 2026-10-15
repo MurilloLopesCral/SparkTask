@@ -455,10 +455,17 @@
 			</dd>
 
 			{#if !editing}
-				<dt class="text-muted-foreground">Prazo</dt>
-				<dd class="font-medium {dueDateStatusClass(task.dueDate)}">
-					{formatDate(task.dueDate) ?? '—'}
-				</dd>
+				{#if task.status === 'done'}
+					<dt class="text-muted-foreground">Concluída em</dt>
+					<dd class="font-medium text-tint-sage">
+						{formatDate(task.finishedAt) ?? '—'}
+					</dd>
+				{:else}
+					<dt class="text-muted-foreground">Prazo</dt>
+					<dd class="font-medium {dueDateStatusClass(task.dueDate)}">
+						{formatDate(task.dueDate) ?? '—'}
+					</dd>
+				{/if}
 			{/if}
 
 			<dt class="text-muted-foreground">Criada em</dt>

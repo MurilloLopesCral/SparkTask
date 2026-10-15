@@ -33,7 +33,7 @@ const createTaskSchema = z.object({
  *   type=mandatory                       (repeatable)
  *   projectId=<uuid>
  *   ownerId=<uuid>
- *   search=<text>                        (matches title, case-insensitive)
+ *   search=<text>                        (matches title or description, ILIKE)
  *   dueAfter=YYYY-MM-DD / dueBefore=YYYY-MM-DD
  */
 export const GET: RequestHandler = async ({ url, locals }) => {

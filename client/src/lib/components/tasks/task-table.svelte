@@ -64,7 +64,7 @@
 			<Table.Head>Responsável</Table.Head>
 			<Table.Head>Prioridade</Table.Head>
 			<Table.Head>Status</Table.Head>
-			<Table.Head>Prazo</Table.Head>
+			<Table.Head>Prazo / Conclusão</Table.Head>
 			<Table.Head class="w-0"><span class="sr-only">Arquivos</span></Table.Head>
 		</Table.Row>
 	</Table.Header>
@@ -111,9 +111,17 @@
 											<StatusBadge status={task.status} />
 											<TaskConfettiBurst taskId={task.id} />
 										</Table.Cell>
-										<Table.Cell class="font-medium {dueDateStatusClass(task.dueDate)}"
-											>{formatDate(task.dueDate) ?? '—'}</Table.Cell
+										<Table.Cell
+											class="font-medium {task.status === 'done'
+												? 'text-tint-sage'
+												: dueDateStatusClass(task.dueDate)}"
 										>
+											{#if task.status === 'done'}
+												{formatDate(task.finishedAt) ?? '—'}
+											{:else}
+												{formatDate(task.dueDate) ?? '—'}
+											{/if}
+										</Table.Cell>
 										<Table.Cell class="w-0">
 											{#if task.files.length > 0}
 												<span class="flex items-center gap-xxs text-caption text-muted-foreground">

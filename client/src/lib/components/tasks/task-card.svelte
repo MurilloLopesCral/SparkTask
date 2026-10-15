@@ -56,6 +56,13 @@
 
 	const dueDate = $derived(formatDate(task.dueDate));
 	const dueDateClass = $derived(dueDateStatusClass(task.dueDate));
+	const finishedDate = $derived(formatDate(task.finishedAt));
+	const dateLabel = $derived(
+		task.status === 'done' ? finishedDate : dueDate
+	);
+	const dateClass = $derived(
+		task.status === 'done' ? 'text-tint-sage' : dueDateClass
+	);
 	const ownerName = $derived(task.owner?.name || task.owner?.email || 'Sem responsável');
 	const ownerInitials = $derived(task.owner ? getInitials(task.owner.name, task.owner.email) : '—');
 
@@ -228,10 +235,13 @@
 						{task.files.length}
 					</span>
 				{/if}
-				{#if dueDate && task.status !== 'done'}
-					<span class="flex items-center gap-xxs font-medium {dueDateClass}">
+				{#if dateLabel}
+					<span class="flex items-center gap-xxs font-medium {dateClass}">
 						<HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} class="size-3" />
-						{dueDate}
+						<span class="sr-only">
+							{task.status === 'done' ? 'Concluída em' : 'Prazo'}
+						</span>
+						{dateLabel}
 					</span>
 				{/if}
 			</span>
