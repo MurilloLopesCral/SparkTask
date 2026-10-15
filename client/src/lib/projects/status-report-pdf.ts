@@ -7,9 +7,42 @@ import {
 } from './status-report';
 
 /**
+ * Copy computed styles from a live node tree onto a clone as inline styles.
+ * Browsers resolve `oklch()` / `color-mix()` to `rgb()` in getComputedStyle,
+ * which html2canvas can parse (it crashes on raw oklch in stylesheets).
+ */
+function inlineComputedStyles(sourceRoot: HTMLElement, targetRoot: HTMLElement) {
+	const sources = [sourceRoot, ...sourceRoot.querySelectorAll<HTMLElement>('*')];
+	const targets = [targetRoot, ...targetRoot.querySelectorAll<HTMLElement>('*')];
+
+	for (let i = 0; i < sources.length; i++) {
+		const source = sources[i];
+		const target = targets[i];
+		if (!source || !target) continue;
+
+		const computed = getComputedStyle(source);
+		for (let p = 0; p < computed.length; p++) {
+			const prop = computed.item(p);
+			if (!prop) continue;
+			try {
+				target.style.setProperty(prop, computed.getPropertyValue(prop), computed.getPropertyPriority(prop));
+			} catch {
+				// Some properties are read-only on SVG etc. — skip.
+			}
+		}
+
+		target.removeAttribute('class');
+	}
+}
+
+function stripStylesheets(doc: Document) {
+	doc.querySelectorAll('style, link[rel="stylesheet"]').forEach((node) => node.remove());
+}
+
+/**
  * Capture the report DOM and download a multi-page A4 PDF.
- * Clones the node onto `document.body` first — html2canvas breaks on ancestors
- * with CSS `transform` (e.g. centered dialogs).
+ * Clones off-dialog (avoids CSS transform ancestors) and inlines RGB styles
+ * so html2canvas never has to parse Tailwind's `oklch()` tokens.
  */
 export async function downloadStatusReportPdf(
 	element: HTMLElement,
@@ -30,23 +63,23 @@ export async function downloadStatusReportPdf(
 	].join(';');
 
 	const clone = element.cloneNode(true) as HTMLElement;
-	clone.style.cssText = [
-		'width:210mm',
-		'max-width:210mm',
-		'margin:0',
-		'background:#ffffff',
-		'color:#000000'
-	].join(';');
-	// Avoid interactive controls affecting layout in the clone.
-	clone.querySelectorAll('input, button, textarea, select').forEach((node) => {
-		(node as HTMLElement).style.pointerEvents = 'none';
-	});
+	clone.style.width = '210mm';
+	clone.style.maxWidth = '210mm';
+	clone.style.margin = '0';
+	clone.style.background = '#ffffff';
 
 	host.appendChild(clone);
 	document.body.appendChild(host);
 
 	try {
-		// Let layout settle (fonts / markdown).
+		inlineComputedStyles(element, clone);
+		// Override layout after inlining — dialog constraints / transforms must not stick.
+		clone.style.setProperty('width', '210mm', 'important');
+		clone.style.setProperty('max-width', '210mm', 'important');
+		clone.style.setProperty('margin', '0', 'important');
+		clone.style.setProperty('transform', 'none', 'important');
+		clone.style.setProperty('background-color', '#ffffff', 'important');
+
 		await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
 		const canvas = await html2canvas(clone, {
@@ -55,10 +88,14 @@ export async function downloadStatusReportPdf(
 			allowTaint: true,
 			backgroundColor: '#ffffff',
 			logging: false,
-			width: clone.scrollWidth,
-			height: clone.scrollHeight,
-			windowWidth: clone.scrollWidth,
-			windowHeight: clone.scrollHeight
+			width: Math.max(clone.scrollWidth, 1),
+			height: Math.max(clone.scrollHeight, 1),
+			windowWidth: Math.max(clone.scrollWidth, 1),
+			windowHeight: Math.max(clone.scrollHeight, 1),
+			onclone: (clonedDoc) => {
+				// Drop stylesheets so html2canvas never parses oklch rules.
+				stripStylesheets(clonedDoc);
+			}
 		});
 
 		if (!canvas.width || !canvas.height) {
