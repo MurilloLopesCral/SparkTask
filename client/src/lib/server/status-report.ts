@@ -2,6 +2,7 @@
 import { db } from './db';
 import {
 	task,
+	taskExecution,
 	type taskKindEnum,
 	type taskStatusEnum
 } from './db/schema';
@@ -18,6 +19,29 @@ const TZ = sql.raw("'America/Sao_Paulo'");
 function ownerDisplayName(owner: { name: string | null; email: string } | null) {
 	if (!owner) return 'Sem responsável';
 	return owner.name?.trim() || owner.email;
+}
+
+/** Sum execution intervals per task (open rows count until `now`). */
+async function resolutionSecondsByTaskId(taskIds: string[], now = new Date()) {
+	const totals = new Map<string, number>();
+	if (taskIds.length === 0) return totals;
+
+	const executions = await db
+		.select({
+			taskId: taskExecution.taskId,
+			startedAt: taskExecution.startedAt,
+			endedAt: taskExecution.endedAt
+		})
+		.from(taskExecution)
+		.where(inArray(taskExecution.taskId, taskIds));
+
+	for (const row of executions) {
+		const end = row.endedAt ?? now;
+		const seconds = Math.max(0, (end.getTime() - row.startedAt.getTime()) / 1000);
+		totals.set(row.taskId, (totals.get(row.taskId) ?? 0) + seconds);
+	}
+
+	return totals;
 }
 
 /**
@@ -87,6 +111,8 @@ export async function buildProjectStatusReport(
 		}
 	});
 
+	const resolutionByTask = await resolutionSecondsByTaskId(rows.map((r) => r.id));
+
 	const tasks: StatusReportTaskRow[] = rows.map((row) => ({
 		id: row.id,
 		title: row.title,
@@ -94,7 +120,8 @@ export async function buildProjectStatusReport(
 		priority: row.priority as StatusReportTaskRow['priority'],
 		kind: row.kind as StatusReportTaskRow['kind'],
 		dueDate: row.dueDate,
-		ownerName: ownerDisplayName(row.owner)
+		ownerName: ownerDisplayName(row.owner),
+		resolutionSeconds: Math.round(resolutionByTask.get(row.id) ?? 0)
 	}));
 
 	const summary = computeStatusReportSummary(tasks);

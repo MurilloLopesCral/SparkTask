@@ -1,5 +1,5 @@
 ﻿<script lang="ts">
-	import { formatDate, formatDateTime } from '$lib/tasks/format';
+	import { formatDateTime, formatDuration } from '$lib/tasks/format';
 	import {
 		kindLabel,
 		priorityLabel,
@@ -19,6 +19,7 @@
 
 	const progress = $derived(Math.min(100, Math.max(0, report.summary.progressPercent)));
 	const observations = $derived(report.observations?.trim() ?? '');
+	const totalTimeLabel = $derived(formatDuration(report.summary.totalResolutionSeconds));
 </script>
 
 <article
@@ -62,7 +63,7 @@
 			Concluídas ÷ (total − canceladas). Canceladas não entram no percentual.
 		</p>
 
-		<div class="mt-md grid grid-cols-1 gap-sm sm:grid-cols-2">
+		<div class="mt-md grid grid-cols-1 gap-sm sm:grid-cols-3">
 			<div class="border-2 border-frame bg-tint-sky/40 px-md py-sm">
 				<p class="font-sans text-ui-label uppercase text-muted-foreground">Total de tarefas</p>
 				<p class="font-display text-h1 tabular-nums uppercase">{report.summary.total}</p>
@@ -70,6 +71,10 @@
 			<div class="border-2 border-frame bg-tint-peach/40 px-md py-sm">
 				<p class="font-sans text-ui-label uppercase text-muted-foreground">Total de pendentes</p>
 				<p class="font-display text-h1 tabular-nums uppercase">{report.summary.pending}</p>
+			</div>
+			<div class="border-2 border-frame bg-tint-periwinkle/40 px-md py-sm">
+				<p class="font-sans text-ui-label uppercase text-muted-foreground">Tempo total gasto</p>
+				<p class="font-display text-h1 tabular-nums uppercase">{totalTimeLabel}</p>
 			</div>
 		</div>
 
@@ -102,13 +107,13 @@
 	<section class="mt-lg overflow-x-auto border-2 border-frame">
 		<div class="min-w-160">
 		<div
-			class="grid grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,1.1fr)] gap-xs border-b-2 border-frame bg-frame px-sm py-xs font-sans text-[10px] font-bold tracking-wide text-canvas uppercase sm:text-ui-label"
+			class="grid grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_minmax(0,0.95fr)_minmax(0,0.85fr)_minmax(0,0.9fr)] gap-xs border-b-2 border-frame bg-frame px-sm py-xs font-sans text-[10px] font-bold tracking-wide text-canvas uppercase sm:text-ui-label"
 		>
 			<span>Tarefa</span>
 			<span>Responsável</span>
 			<span>Status</span>
 			<span>Prioridade</span>
-			<span>Data geração</span>
+			<span>Resolução</span>
 		</div>
 
 		{#if report.tasks.length === 0}
@@ -119,7 +124,7 @@
 			<ul class="divide-y divide-frame">
 				{#each report.tasks as row (row.id)}
 					<li
-						class="grid grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,1.1fr)] gap-xs px-sm py-sm font-serif text-caption sm:text-body-sm"
+						class="grid grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_minmax(0,0.95fr)_minmax(0,0.85fr)_minmax(0,0.9fr)] gap-xs px-sm py-sm font-serif text-caption sm:text-body-sm"
 					>
 						<div class="min-w-0">
 							<p class="truncate font-medium text-pretty">{row.title}</p>
@@ -142,8 +147,8 @@
 							</span>
 						</span>
 						<span>{priorityLabel(row.priority)}</span>
-						<span class="tabular-nums text-muted-foreground">
-							{formatDateTime(report.generatedAt) ?? formatDate(report.generatedAt) ?? '—'}
+						<span class="tabular-nums font-medium">
+							{row.resolutionSeconds > 0 ? formatDuration(row.resolutionSeconds) : '—'}
 						</span>
 					</li>
 				{/each}

@@ -35,6 +35,8 @@ export type StatusReportTaskRow = {
 	kind: TaskKind;
 	dueDate: string | null;
 	ownerName: string;
+	/** Sum of execution intervals for this task (seconds). */
+	resolutionSeconds: number;
 };
 
 export type StatusReportPayload = {
@@ -53,6 +55,8 @@ export type StatusReportPayload = {
 		cancelled: number;
 		/** done / (total - cancelled), 0–100. */
 		progressPercent: number;
+		/** Sum of resolutionSeconds across all listed tasks. */
+		totalResolutionSeconds: number;
 	};
 	/** Free-form markdown notes shown between hero and task list. */
 	observations: string;
@@ -61,15 +65,20 @@ export type StatusReportPayload = {
 
 const PENDING: TaskStatus[] = ['not_started', 'in_progress', 'stand_by'];
 
-export function computeStatusReportSummary(tasks: { status: TaskStatus }[]) {
+export function computeStatusReportSummary(
+	tasks: { status: TaskStatus; resolutionSeconds?: number }[]
+) {
 	const total = tasks.length;
 	const done = tasks.filter((t) => t.status === 'done').length;
 	const cancelled = tasks.filter((t) => t.status === 'cancelled').length;
 	const pending = tasks.filter((t) => PENDING.includes(t.status)).length;
 	const eligible = total - cancelled;
 	const progressPercent = eligible <= 0 ? 0 : Math.round((done / eligible) * 100);
+	const totalResolutionSeconds = Math.round(
+		tasks.reduce((sum, t) => sum + Math.max(0, t.resolutionSeconds ?? 0), 0)
+	);
 
-	return { total, pending, done, cancelled, progressPercent };
+	return { total, pending, done, cancelled, progressPercent, totalResolutionSeconds };
 }
 
 /** Local calendar YYYY-MM-DD in the browser / server local TZ (UI dates). */
