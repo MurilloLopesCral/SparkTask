@@ -21,6 +21,7 @@
 	import TaskList from '$lib/components/tasks/task-list.svelte';
 	import CreateTaskSheet from '$lib/components/tasks/create-task-sheet.svelte';
 	import { TASK_STATUSES, TASK_PRIORITIES, TASK_TYPES } from '$lib/tasks/constants';
+	import { toDateKey } from '$lib/tasks/format';
 	import { pauseAllTaskExecutions } from '$lib/tasks/execution-api';
 	import { IsMobile } from '$lib/hooks/is-mobile.svelte.js';
 	import type { PageProps } from './$types';
@@ -43,6 +44,8 @@
 	let projectFilter = $state(page.url.searchParams.get('project') ?? 'all');
 	let dueFrom = $state(page.url.searchParams.get('dueFrom') ?? '');
 	let dueTo = $state(page.url.searchParams.get('dueTo') ?? '');
+	let finishedFrom = $state(page.url.searchParams.get('finishedFrom') ?? '');
+	let finishedTo = $state(page.url.searchParams.get('finishedTo') ?? '');
 	let priorityFilter = $state(page.url.searchParams.get('priority') ?? 'all');
 	let typeFilter = $state(page.url.searchParams.get('type') ?? 'all');
 	let ownerFilter = $state(page.url.searchParams.get('owner') ?? 'all');
@@ -159,6 +162,8 @@
 	function clearFilters() {
 		dueFrom = '';
 		dueTo = '';
+		finishedFrom = '';
+		finishedTo = '';
 		priorityFilter = 'all';
 		typeFilter = 'all';
 		ownerFilter = 'all';
@@ -167,6 +172,8 @@
 		updateUrl({
 			dueFrom: undefined,
 			dueTo: undefined,
+			finishedFrom: undefined,
+			finishedTo: undefined,
 			priority: undefined,
 			type: undefined,
 			owner: undefined,
@@ -194,6 +201,8 @@
 		[
 			dueFrom,
 			dueTo,
+			finishedFrom,
+			finishedTo,
 			priorityFilter !== 'all',
 			typeFilter !== 'all',
 			ownerFilter !== 'all',
@@ -220,6 +229,12 @@
 				return false;
 			if (dueFrom && (!t.dueDate || t.dueDate < dueFrom)) return false;
 			if (dueTo && (!t.dueDate || t.dueDate > dueTo)) return false;
+			if (finishedFrom || finishedTo) {
+				const finishedDay = toDateKey(t.finishedAt);
+				if (!finishedDay) return false;
+				if (finishedFrom && finishedDay < finishedFrom) return false;
+				if (finishedTo && finishedDay > finishedTo) return false;
+			}
 			if (searchFilter) {
 				const needle = searchFilter.toLocaleLowerCase('pt-BR');
 				const title = t.title.toLocaleLowerCase('pt-BR');
@@ -322,6 +337,8 @@
 							<input
 								type="date"
 								class="text-input"
+								name="dueFrom"
+								autocomplete="off"
 								bind:value={dueFrom}
 								onchange={() => applyFilters({ dueFrom })}
 							/>
@@ -331,8 +348,35 @@
 							<input
 								type="date"
 								class="text-input"
+								name="dueTo"
+								autocomplete="off"
 								bind:value={dueTo}
 								onchange={() => applyFilters({ dueTo })}
+							/>
+						</label>
+					</div>
+
+					<div class="flex gap-sm">
+						<label class="flex flex-1 flex-col gap-xxs">
+							<span class="font-sans text-ui-label uppercase">Concluído de</span>
+							<input
+								type="date"
+								class="text-input"
+								name="finishedFrom"
+								autocomplete="off"
+								bind:value={finishedFrom}
+								onchange={() => applyFilters({ finishedFrom })}
+							/>
+						</label>
+						<label class="flex flex-1 flex-col gap-xxs">
+							<span class="font-sans text-ui-label uppercase">Concluído até</span>
+							<input
+								type="date"
+								class="text-input"
+								name="finishedTo"
+								autocomplete="off"
+								bind:value={finishedTo}
+								onchange={() => applyFilters({ finishedTo })}
 							/>
 						</label>
 					</div>

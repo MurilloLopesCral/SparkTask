@@ -21,6 +21,9 @@ export type StatusReportFilters = {
 	/** Inclusive YYYY-MM-DD — filters by task createdAt (America/Sao_Paulo day). */
 	createdAfter?: string;
 	createdBefore?: string;
+	/** Inclusive YYYY-MM-DD — filters by task finishedAt (America/Sao_Paulo day). */
+	finishedAfter?: string;
+	finishedBefore?: string;
 	status?: TaskStatus[];
 	kind?: TaskKind[];
 	/** When set, only these task ids (still scoped to the project). */
@@ -40,10 +43,19 @@ export type StatusReportTaskRow = {
 	resolutionSeconds: number;
 };
 
+export type StatusReportPeriodSlice = {
+	from: string | null;
+	to: string | null;
+	label: string;
+};
+
 export type StatusReportPayload = {
 	project: { id: string; name: string; groupName: string; image: string | null };
 	generatedAt: string;
-	period: { from: string | null; to: string | null; label: string };
+	/** Created-at period (legacy “Período” on the report). */
+	period: StatusReportPeriodSlice;
+	/** Finished-at period (“Concluído em”), when applied. */
+	finishedPeriod?: StatusReportPeriodSlice | null;
 	filters: {
 		status: TaskStatus[] | null;
 		kind: TaskKind[] | null;
@@ -113,7 +125,7 @@ export function resolvePeriodPreset(
 
 	switch (preset) {
 		case 'all':
-			return { from: '', to: '', label: 'Projeto completo' };
+			return { from: '', to: '', label: 'Sem filtro de data' };
 		case 'this_week': {
 			const from = toDateInputValue(startOfWeek(now));
 			return { from, to: today, label: `Esta semana (${formatDate(from)} – ${formatDate(today)})` };

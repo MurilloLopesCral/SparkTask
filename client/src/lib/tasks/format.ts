@@ -30,6 +30,16 @@ export function formatDate(value: string | Date | null | undefined) {
 	return dateFormatter.format(toLocalDate(value));
 }
 
+/** Local calendar day as `YYYY-MM-DD` — for comparing date filters. */
+export function toDateKey(value: string | Date | null | undefined): string | null {
+	if (!value) return null;
+	const d = toLocalDate(value);
+	const y = d.getFullYear();
+	const m = String(d.getMonth() + 1).padStart(2, '0');
+	const day = String(d.getDate()).padStart(2, '0');
+	return `${y}-${m}-${day}`;
+}
+
 const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
 	dateStyle: 'short',
 	timeStyle: 'short'

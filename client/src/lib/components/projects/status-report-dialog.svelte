@@ -43,6 +43,9 @@
 	let periodPreset = $state<StatusReportPeriodPreset>('all');
 	let customFrom = $state('');
 	let customTo = $state('');
+	let finishedPreset = $state<StatusReportPeriodPreset>('all');
+	let finishedCustomFrom = $state('');
+	let finishedCustomTo = $state('');
 	let selectedStatuses = $state<TaskStatus[]>([]);
 	let selectedKinds = $state<TaskKind[]>([]);
 	let specificMode = $state(false);
@@ -55,6 +58,9 @@
 	let report = $state<StatusReportPayload | null>(null);
 
 	const period = $derived(resolvePeriodPreset(periodPreset, customFrom, customTo));
+	const finishedPeriod = $derived(
+		resolvePeriodPreset(finishedPreset, finishedCustomFrom, finishedCustomTo)
+	);
 
 	const PERIOD_OPTIONS: { value: StatusReportPeriodPreset; label: string; hint: string }[] = [
 		{ value: 'all', label: 'Tudo', hint: 'Sem filtro de data' },
@@ -64,6 +70,11 @@
 		{ value: 'this_quarter', label: 'Trimestre', hint: 'Trimestre atual' },
 		{ value: 'custom', label: 'Custom', hint: 'Escolha as datas' }
 	];
+
+	function finishedPeriodLabel() {
+		if (!finishedPeriod.from && !finishedPeriod.to) return '';
+		return `Concluído em: ${finishedPeriod.label}`;
+	}
 
 	let wasOpen = false;
 	$effect(() => {
@@ -125,7 +136,11 @@
 
 	async function generateReport() {
 		if (periodPreset === 'custom' && !customFrom) {
-			toast.error('Informe a data inicial do período.');
+			toast.error('Informe a data inicial do período de criação.');
+			return;
+		}
+		if (finishedPreset === 'custom' && !finishedCustomFrom) {
+			toast.error('Informe a data inicial do período de conclusão.');
 			return;
 		}
 		if (specificMode && selectedTaskIds.length === 0) {
@@ -139,6 +154,10 @@
 			params.set('periodLabel', period.label);
 			if (period.from) params.set('createdAfter', period.from);
 			if (period.to) params.set('createdBefore', period.to);
+			if (finishedPeriod.from) params.set('finishedAfter', finishedPeriod.from);
+			if (finishedPeriod.to) params.set('finishedBefore', finishedPeriod.to);
+			const finishedLabel = finishedPeriodLabel();
+			if (finishedLabel) params.set('finishedPeriodLabel', finishedLabel);
 			for (const s of selectedStatuses) params.append('status', s);
 			for (const k of selectedKinds) params.append('kind', k);
 			if (specificMode) {
@@ -195,9 +214,9 @@
 		{#if step === 'filters'}
 			<div class="min-h-0 flex-1 space-y-md overflow-y-auto pr-xxs">
 				<section class="flex flex-col gap-xs">
-					<span class="font-sans text-ui-label uppercase">Período</span>
+					<span class="font-sans text-ui-label uppercase">Período de criação</span>
 					<p class="font-serif text-caption text-muted-foreground">
-						Filtra tarefas pela data de criação (fuso America/Sao_Paulo).
+						Filtra pela data de criação da tarefa (fuso America/Sao_Paulo).
 					</p>
 					<div class="grid grid-cols-2 gap-xs sm:grid-cols-3">
 						{#each PERIOD_OPTIONS as option (option.value)}
@@ -240,6 +259,57 @@
 						</div>
 					{/if}
 					<p class="font-serif text-caption text-muted-foreground">{period.label}</p>
+				</section>
+
+				<section class="flex flex-col gap-xs border-t border-frame pt-md">
+					<span class="font-sans text-ui-label uppercase">Concluído em</span>
+					<p class="font-serif text-caption text-muted-foreground">
+						Filtra pela data de conclusão (fuso America/Sao_Paulo). Tarefas sem conclusão ficam de
+						fora quando o filtro está ativo.
+					</p>
+					<div class="grid grid-cols-2 gap-xs sm:grid-cols-3">
+						{#each PERIOD_OPTIONS as option (option.value)}
+							<button
+								type="button"
+								class="border-2 border-frame px-sm py-sm text-left transition-colors duration-150 hover:bg-muted focus-visible:ring-2 focus-visible:ring-frame focus-visible:outline-none {finishedPreset ===
+								option.value
+									? 'bg-sticker-yellow'
+									: 'bg-canvas'}"
+								aria-pressed={finishedPreset === option.value}
+								onclick={() => (finishedPreset = option.value)}
+							>
+								<span class="block font-sans text-ui-label uppercase">{option.label}</span>
+								<span class="font-serif text-caption text-muted-foreground">{option.hint}</span>
+							</button>
+						{/each}
+					</div>
+					{#if finishedPreset === 'custom'}
+						<div class="grid grid-cols-1 gap-sm sm:grid-cols-2">
+							<label class="flex flex-col gap-xxs">
+								<span class="font-sans text-ui-label uppercase">De</span>
+								<input
+									type="date"
+									class="text-input min-h-11"
+									name="reportFinishedFrom"
+									autocomplete="off"
+									bind:value={finishedCustomFrom}
+								/>
+							</label>
+							<label class="flex flex-col gap-xxs">
+								<span class="font-sans text-ui-label uppercase">Até</span>
+								<input
+									type="date"
+									class="text-input min-h-11"
+									name="reportFinishedTo"
+									autocomplete="off"
+									bind:value={finishedCustomTo}
+								/>
+							</label>
+						</div>
+					{/if}
+					<p class="font-serif text-caption text-muted-foreground">
+						{finishedPeriodLabel() || finishedPeriod.label}
+					</p>
 				</section>
 
 				<section class="flex flex-col gap-xs">

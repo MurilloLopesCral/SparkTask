@@ -40,7 +40,15 @@
 				<h1 class="font-display text-display text-pretty uppercase">Status Report</h1>
 				<p class="mt-xs font-sans text-h2 uppercase">Projeto {report.project.name}</p>
 				<p class="font-serif text-caption text-muted-foreground">
-					{report.project.groupName} · {report.period.label}
+					{report.project.groupName}
+					{#if report.period.from || report.period.to}
+						· Criado: {report.period.label}
+					{:else}
+						· {report.period.label}
+					{/if}
+					{#if report.finishedPeriod}
+						· {report.finishedPeriod.label}
+					{/if}
 				</p>
 			</div>
 		</div>

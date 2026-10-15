@@ -46,13 +46,17 @@ async function resolutionSecondsByTaskId(taskIds: string[], now = new Date()) {
 
 /**
  * Build a printable status report for a project the caller can access.
- * Period filters use task.createdAt in America/Sao_Paulo calendar days.
+ * Created/finished period filters use America/Sao_Paulo calendar days.
  */
 export async function buildProjectStatusReport(
 	userId: string,
 	filters: StatusReportFilters,
-	periodLabel: string
+	labels: { created: string; finished?: string } | string
 ): Promise<{ ok: true; report: StatusReportPayload } | { ok: false; status: number; message: string }> {
+	const periodLabels =
+		typeof labels === 'string'
+			? { created: labels, finished: undefined as string | undefined }
+			: labels;
 	if (!(await userCanAccessProject(userId, filters.projectId))) {
 		return { ok: false, status: 403, message: 'Você não tem acesso a este projeto.' };
 	}
@@ -91,6 +95,22 @@ export async function buildProjectStatusReport(
 			lte(
 				sql`((${task.createdAt} AT TIME ZONE ${TZ})::date)`,
 				filters.createdBefore
+			)
+		);
+	}
+	if (filters.finishedAfter) {
+		conditions.push(
+			gte(
+				sql`((${task.finishedAt} AT TIME ZONE ${TZ})::date)`,
+				filters.finishedAfter
+			)
+		);
+	}
+	if (filters.finishedBefore) {
+		conditions.push(
+			lte(
+				sql`((${task.finishedAt} AT TIME ZONE ${TZ})::date)`,
+				filters.finishedBefore
 			)
 		);
 	}
@@ -139,8 +159,16 @@ export async function buildProjectStatusReport(
 		period: {
 			from: filters.createdAfter ?? null,
 			to: filters.createdBefore ?? null,
-			label: periodLabel
+			label: periodLabels.created
 		},
+		finishedPeriod:
+			filters.finishedAfter || filters.finishedBefore
+				? {
+						from: filters.finishedAfter ?? null,
+						to: filters.finishedBefore ?? null,
+						label: periodLabels.finished?.trim() || 'Concluído em (filtro ativo)'
+					}
+				: null,
 		filters: {
 			status: filters.status?.length ? filters.status : null,
 			kind: filters.kind?.length ? filters.kind : null,
