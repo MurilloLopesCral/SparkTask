@@ -3,14 +3,21 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
-	import { MoreVerticalIcon, Edit02Icon, Delete02Icon } from '@hugeicons/core-free-icons';
+	import {
+		MoreVerticalIcon,
+		Edit02Icon,
+		Delete02Icon,
+		File01Icon
+	} from '@hugeicons/core-free-icons';
 	import EditProjectSheet from './edit-project-sheet.svelte';
+	import StatusReportDialog from './status-report-dialog.svelte';
 	import { removeProject } from '$lib/projects/api';
 	import type { VisibleProject } from '$lib/server/projects';
 
 	let { project }: { project: VisibleProject } = $props();
 
 	let editOpen = $state(false);
+	let reportOpen = $state(false);
 </script>
 
 <Card.Root class="card-bevel group/project-card relative rounded-none ring-0">
@@ -25,6 +32,10 @@
 				{/snippet}
 			</DropdownMenu.Trigger>
 			<DropdownMenu.Content align="end">
+				<DropdownMenu.Item onSelect={() => (reportOpen = true)}>
+					<HugeiconsIcon icon={File01Icon} strokeWidth={2} />
+					Status report
+				</DropdownMenu.Item>
 				<DropdownMenu.Item onSelect={() => (editOpen = true)}>
 					<HugeiconsIcon icon={Edit02Icon} strokeWidth={2} />
 					Editar
@@ -53,3 +64,4 @@
 </Card.Root>
 
 <EditProjectSheet {project} bind:open={editOpen} />
+<StatusReportDialog {project} bind:open={reportOpen} />
