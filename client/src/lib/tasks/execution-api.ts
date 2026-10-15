@@ -1,6 +1,5 @@
 ﻿import { invalidateAll } from '$app/navigation';
 import { toast } from 'svelte-sonner';
-import { celebration } from './celebration.svelte';
 
 type ExecutionAction = 'start' | 'pause' | 'finish';
 
@@ -61,10 +60,7 @@ export async function pauseTaskExecution(taskId: string) {
 
 export async function finishTaskExecution(taskId: string) {
 	const ok = await postExecution(taskId, 'finish');
-	if (ok) {
-		celebration.celebrate(taskId);
-		toast.success('Tarefa finalizada.');
-	}
+	if (ok) toast.success('Execução encerrada. Tarefa em validação.');
 	return ok;
 }
 

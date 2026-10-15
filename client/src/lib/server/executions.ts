@@ -45,10 +45,15 @@ export async function startExecution(taskId: string, userId: string) {
 		.limit(1);
 
 	if (!row) return { ok: false as const, message: 'Tarefa não encontrada.', status: 404 };
-	if (row.status === 'done' || row.status === 'cancelled') {
+	if (
+		row.status === 'done' ||
+		row.status === 'cancelled' ||
+		row.status === 'pending_validation'
+	) {
 		return {
 			ok: false as const,
-			message: 'Não é possível executar uma tarefa finalizada ou cancelada.',
+			message:
+				'Não é possível executar uma tarefa em validação, finalizada ou cancelada.',
 			status: 400
 		};
 	}
@@ -148,6 +153,10 @@ export async function pauseAllOpenExecutionsForUser(userId: string) {
 	return { paused: open.length, taskIds };
 }
 
+/**
+ * Ends the work session and moves the task to validation (not done yet).
+ * Closes open timers — same affordance as pause, different target status.
+ */
 export async function finishExecution(taskId: string, userId: string) {
 	const [row] = await db
 		.select({ status: task.status })
@@ -156,17 +165,28 @@ export async function finishExecution(taskId: string, userId: string) {
 		.limit(1);
 
 	if (!row) return { ok: false as const, message: 'Tarefa não encontrada.', status: 404 };
-	if (row.status === 'done') {
-		return { ok: false as const, message: 'A tarefa já está finalizada.', status: 400 };
+	if (row.status === 'done' || row.status === 'cancelled') {
+		return {
+			ok: false as const,
+			message: 'A tarefa já está finalizada ou cancelada.',
+			status: 400
+		};
+	}
+	if (row.status === 'pending_validation') {
+		return {
+			ok: false as const,
+			message: 'A tarefa já está em validação.',
+			status: 400
+		};
 	}
 
 	const closed = await closeOpenExecution(taskId, userId, 'completed');
-	// Finishing without an open timer is allowed — still marks the task done.
+	// Finishing without an open timer is allowed — still sends to validation.
 	await autoCloseOpenExecutions(taskId);
 
 	await db
 		.update(task)
-		.set({ status: 'done', finishedAt: new Date(), updatedAt: new Date() })
+		.set({ status: 'pending_validation', updatedAt: new Date() })
 		.where(eq(task.id, taskId));
 
 	return { ok: true as const, execution: closed };

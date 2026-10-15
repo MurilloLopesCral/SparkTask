@@ -67,7 +67,11 @@
 	const ownerName = $derived(task.owner?.name || task.owner?.email || 'Sem responsável');
 	const ownerInitials = $derived(task.owner ? getInitials(task.owner.name, task.owner.email) : '—');
 
-	const canExecute = $derived(task.status !== 'done' && task.status !== 'cancelled');
+	const canExecute = $derived(
+		task.status !== 'done' &&
+			task.status !== 'cancelled' &&
+			task.status !== 'pending_validation'
+	);
 	const activeExecution = $derived(task.executions[0] ?? null);
 	const isRunning = $derived(Boolean(activeExecution));
 

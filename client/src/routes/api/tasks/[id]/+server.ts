@@ -73,8 +73,12 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 
 	await updateTaskFields(params.id, fields);
 
-	// Kanban/table/edit paths that land on a terminal status must close running timers.
-	if (fields.status === 'done' || fields.status === 'cancelled') {
+	// Terminal / no-execution statuses must close running timers.
+	if (
+		fields.status === 'done' ||
+		fields.status === 'cancelled' ||
+		fields.status === 'pending_validation'
+	) {
 		await autoCloseOpenExecutions(params.id);
 	}
 
