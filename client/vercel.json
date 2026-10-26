@@ -1,9 +1,8 @@
-﻿{
-	"$schema": "https://openapi.vercel.sh/vercel.json",
-	"crons": [
-		{
-			"path": "/api/cron/pause-after-hours",
-			"schedule": "0 21 * * *"
-		}
-	]
+{
+  "crons": [
+    {
+      "path": "/api/cron/pause-after-hours",
+      "schedule": "0 21 * * *"
+    }
+  ]
 }
