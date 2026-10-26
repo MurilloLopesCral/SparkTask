@@ -471,6 +471,21 @@
 		text-transform: uppercase;
 	}
 
+	/* Kanban/list card preview — fixed height; markdown blocks break line-clamp. */
+	.task-card-description {
+		mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+	}
+	.task-card-description > :first-child {
+		margin-top: 0;
+	}
+	.task-card-description h1,
+	.task-card-description h2,
+	.task-card-description h3 {
+		margin-top: 0.15em;
+		margin-bottom: 0.1em;
+		font-size: 0.75rem;
+	}
+
 	.data-table {
 		@apply border border-frame;
 	}

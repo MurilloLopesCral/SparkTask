@@ -172,7 +172,9 @@
 		</div>
 
 		{#if task.description}
-			<div class="markdown-body line-clamp-3 font-serif text-body-sm text-muted-foreground">
+			<div
+				class="task-card-description markdown-body max-h-20 overflow-hidden font-serif text-body-sm text-muted-foreground"
+			>
 				<MarkdownDescription source={task.description} />
 			</div>
 		{/if}
