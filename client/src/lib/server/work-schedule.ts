@@ -30,8 +30,10 @@ export function zonedClock(date: Date, timeZone: string) {
 	}).formatToParts(date);
 
 	const weekday = parts.find((p) => p.type === 'weekday')?.value ?? 'Mon';
-	const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? '0');
+	let hour = Number(parts.find((p) => p.type === 'hour')?.value ?? '0');
 	const minute = Number(parts.find((p) => p.type === 'minute')?.value ?? '0');
+	// Some engines report midnight as 24 with h23.
+	if (hour === 24) hour = 0;
 
 	return {
 		isoWeekday: WEEKDAY_TO_ISO[weekday] ?? 1,
@@ -50,18 +52,54 @@ export function isWithinWorkHours(schedule: WorkSchedule, now = new Date()): boo
 	const end = timeToMinutes(schedule.endTime);
 	if (start == null || end == null || end <= start) return true;
 
-	const days = schedule.workDays.filter((d) => d >= 1 && d <= 7);
-	if (days.length === 0) return true;
+	const days = normalizeWorkDays(schedule.workDays);
+	// Enabled with no days selected = never inside the window.
+	if (days.length === 0) return false;
 
-	const { isoWeekday, minutes } = zonedClock(now, schedule.timezone || DEFAULT_WORK_SCHEDULE.timezone);
+	const { isoWeekday, minutes } = zonedClock(
+		now,
+		schedule.timezone || DEFAULT_WORK_SCHEDULE.timezone
+	);
 	if (!days.includes(isoWeekday)) return false;
 	return minutes >= start && minutes < end;
 }
 
-export function normalizeWorkDays(days: number[]): number[] {
-	return [...new Set(days.filter((d) => Number.isInteger(d) && d >= 1 && d <= 7))].sort(
-		(a, b) => a - b
-	);
+export function normalizeWorkDays(days: unknown): number[] {
+	let raw: unknown[] = [];
+	if (Array.isArray(days)) {
+		raw = days;
+	} else if (typeof days === 'string') {
+		try {
+			const parsed = JSON.parse(days) as unknown;
+			raw = Array.isArray(parsed) ? parsed : [];
+		} catch {
+			raw = [];
+		}
+	}
+
+	return [
+		...new Set(
+			raw
+				.map((d) => (typeof d === 'string' ? Number(d) : d))
+				.filter((d): d is number => typeof d === 'number' && Number.isInteger(d) && d >= 1 && d <= 7)
+		)
+	].sort((a, b) => a - b);
+}
+
+function scheduleFromRow(row: {
+	enabled: boolean;
+	timezone: string;
+	workDays: unknown;
+	startTime: string;
+	endTime: string;
+}): WorkSchedule {
+	return {
+		enabled: row.enabled,
+		timezone: row.timezone || DEFAULT_WORK_SCHEDULE.timezone,
+		workDays: normalizeWorkDays(row.workDays ?? DEFAULT_WORK_SCHEDULE.workDays),
+		startTime: row.startTime,
+		endTime: row.endTime
+	};
 }
 
 export async function getWorkSchedule(userId: string): Promise<StoredWorkSchedule> {
@@ -70,7 +108,6 @@ export async function getWorkSchedule(userId: string): Promise<StoredWorkSchedul
 	});
 
 	if (!row) {
-		// Ensure every user has a schedule row (new signups after migration).
 		await db
 			.insert(userWorkSchedule)
 			.values({ userId, ...DEFAULT_WORK_SCHEDULE, updatedAt: new Date() })
@@ -78,14 +115,7 @@ export async function getWorkSchedule(userId: string): Promise<StoredWorkSchedul
 		return { userId, ...DEFAULT_WORK_SCHEDULE };
 	}
 
-	return {
-		userId,
-		enabled: row.enabled,
-		timezone: row.timezone,
-		workDays: normalizeWorkDays(row.workDays ?? DEFAULT_WORK_SCHEDULE.workDays),
-		startTime: row.startTime,
-		endTime: row.endTime
-	};
+	return { userId, ...scheduleFromRow(row) };
 }
 
 export async function upsertWorkSchedule(userId: string, input: WorkSchedule) {
@@ -115,6 +145,57 @@ export async function upsertWorkSchedule(userId: string, input: WorkSchedule) {
 		});
 
 	return getWorkSchedule(userId);
+}
+
+async function pauseOpenExecutionsForUsers(userIds: string[], endedAt: Date) {
+	if (userIds.length === 0) {
+		return { pausedExecutions: 0, taskIds: [] as string[] };
+	}
+
+	const open = await db
+		.select({
+			id: taskExecution.id,
+			taskId: taskExecution.taskId,
+			userId: taskExecution.userId
+		})
+		.from(taskExecution)
+		.where(and(inArray(taskExecution.userId, userIds), isNull(taskExecution.endedAt)));
+
+	if (open.length === 0) {
+		return { pausedExecutions: 0, taskIds: [] as string[] };
+	}
+
+	const executionIds = open.map((row) => row.id);
+	const taskIds = [...new Set(open.map((row) => row.taskId))];
+
+	await db
+		.update(taskExecution)
+		.set({ endedAt, endReason: 'paused' })
+		.where(inArray(taskExecution.id, executionIds));
+
+	await db
+		.update(task)
+		.set({ status: 'stand_by', updatedAt: endedAt })
+		.where(inArray(task.id, taskIds));
+
+	return { pausedExecutions: executionIds.length, taskIds };
+}
+
+/**
+ * Safety net for the current user — called on tasks page load / poll.
+ * Covers Hobby cron gaps and failed cron invocations.
+ */
+export async function pauseUserIfOutsideWorkHours(userId: string, now = new Date()) {
+	const schedule = await getWorkSchedule(userId);
+	if (!schedule.enabled || isWithinWorkHours(schedule, now)) {
+		return { paused: false, pausedExecutions: 0 };
+	}
+
+	const result = await pauseOpenExecutionsForUsers([userId], now);
+	return {
+		paused: result.pausedExecutions > 0,
+		pausedExecutions: result.pausedExecutions
+	};
 }
 
 /**
@@ -147,13 +228,7 @@ export async function pauseExecutionsOutsideWorkHours(now = new Date()) {
 	for (const userId of userIds) {
 		const row = scheduleByUser.get(userId);
 		const schedule: WorkSchedule = row
-			? {
-					enabled: row.enabled,
-					timezone: row.timezone,
-					workDays: normalizeWorkDays(row.workDays ?? []),
-					startTime: row.startTime,
-					endTime: row.endTime
-				}
+			? scheduleFromRow(row)
 			: DEFAULT_WORK_SCHEDULE;
 
 		if (!schedule.enabled) continue;
@@ -164,26 +239,11 @@ export async function pauseExecutionsOutsideWorkHours(now = new Date()) {
 		return { checkedUsers: userIds.length, pausedExecutions: 0, pausedUsers: 0 };
 	}
 
-	const toClose = open.filter((row) => usersToPause.includes(row.userId));
-	const executionIds = toClose.map((row) => row.id);
-	const taskIds = [...new Set(toClose.map((row) => row.taskId))];
-	const endedAt = now;
-
-	await db
-		.update(taskExecution)
-		.set({ endedAt, endReason: 'paused' })
-		.where(inArray(taskExecution.id, executionIds));
-
-	if (taskIds.length > 0) {
-		await db
-			.update(task)
-			.set({ status: 'stand_by', updatedAt: endedAt })
-			.where(and(inArray(task.id, taskIds)));
-	}
+	const result = await pauseOpenExecutionsForUsers(usersToPause, now);
 
 	return {
 		checkedUsers: userIds.length,
-		pausedExecutions: executionIds.length,
+		pausedExecutions: result.pausedExecutions,
 		pausedUsers: usersToPause.length
 	};
 }
