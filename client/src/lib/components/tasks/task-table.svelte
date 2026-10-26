@@ -2,7 +2,6 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
-	import * as Avatar from '$lib/components/ui/avatar/index.js';
 	import { mergeProps } from 'bits-ui';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import {
@@ -16,9 +15,9 @@
 	import TaskDetailsDialog from './task-details-dialog.svelte';
 	import TaskConfettiBurst from './task-confetti-burst.svelte';
 	import ProjectIcon from '$lib/components/projects/project-icon.svelte';
+	import TaskOwnerSelect from './task-owner-select.svelte';
 	import { TASK_STATUSES, TASK_PRIORITY_META } from '$lib/tasks/constants';
 	import { formatDate, dueDateStatusClass } from '$lib/tasks/format';
-	import { getInitials } from '$lib/users/format';
 	import { setTaskStatus, removeTask } from '$lib/tasks/api';
 	import type { FileUploadConfig } from '$lib/tasks/files-api';
 	import type { VisibleTask } from '$lib/server/tasks';
@@ -97,22 +96,12 @@
 											</span>
 										</Table.Cell>
 										<Table.Cell>
-											{#if task.owner}
-												<span class="flex items-center gap-xs">
-													<Avatar.Root size="sm" class="size-7">
-														<Avatar.Image
-															src={task.owner.image}
-															alt={task.owner.name ?? task.owner.email}
-														/>
-														<Avatar.Fallback class="text-[11px]">
-															{getInitials(task.owner.name, task.owner.email)}
-														</Avatar.Fallback>
-													</Avatar.Root>
-													{task.owner.name || task.owner.email}
-												</span>
-											{:else}
-												—
-											{/if}
+											<TaskOwnerSelect
+												taskId={task.id}
+												ownerId={task.ownerId}
+												owner={task.owner}
+												members={groupMembers.filter((m) => m.groupId === task.project.groupId)}
+											/>
 										</Table.Cell>
 										<Table.Cell>{TASK_PRIORITY_META[task.priority].label}</Table.Cell>
 										<Table.Cell class="relative">

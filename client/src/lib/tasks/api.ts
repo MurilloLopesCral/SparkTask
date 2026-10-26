@@ -26,6 +26,12 @@ export async function setTaskStatus(taskId: string, status: TaskStatus) {
 	return ok;
 }
 
+export async function setTaskOwner(taskId: string, ownerId: string | null) {
+	const ok = await patchTask(taskId, { ownerId });
+	if (ok) toast.success(ownerId ? 'Responsável atualizado.' : 'Responsável removido.');
+	return ok;
+}
+
 export async function removeTask(taskId: string) {
 	const res = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
 	await invalidateAll();

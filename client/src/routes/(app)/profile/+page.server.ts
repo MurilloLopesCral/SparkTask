@@ -1,5 +1,7 @@
+﻿import { getWorkSchedule } from '$lib/server/work-schedule';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-	return { user: locals.user! };
+	const schedule = await getWorkSchedule(locals.user!.id);
+	return { user: locals.user!, schedule };
 };

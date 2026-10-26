@@ -2,7 +2,6 @@
 	import { Card } from '$lib/components/ui/card/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import * as Avatar from '$lib/components/ui/avatar/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import MarkdownDescription from './markdown-description.svelte';
@@ -21,9 +20,9 @@
 	import TaskDetailsDialog from './task-details-dialog.svelte';
 	import TaskConfettiBurst from './task-confetti-burst.svelte';
 	import ProjectIcon from '$lib/components/projects/project-icon.svelte';
+	import TaskOwnerSelect from './task-owner-select.svelte';
 	import { TASK_STATUSES, TASK_PRIORITY_META, TASK_TYPE_META } from '$lib/tasks/constants';
 	import { formatDate, dueDateStatusClass } from '$lib/tasks/format';
-	import { getInitials } from '$lib/users/format';
 	import { setTaskStatus, removeTask } from '$lib/tasks/api';
 	import {
 		finishTaskExecution,
@@ -64,16 +63,12 @@
 	const dateClass = $derived(
 		task.status === 'done' ? 'text-tint-sage' : dueDateClass
 	);
-	const ownerName = $derived(task.owner?.name || task.owner?.email || 'Sem responsável');
-	const ownerInitials = $derived(task.owner ? getInitials(task.owner.name, task.owner.email) : '—');
-
-	const canExecute = $derived(
-		task.status !== 'done' &&
-			task.status !== 'cancelled' &&
-			task.status !== 'pending_validation'
-	);
+	const canExecute = $derived(task.status !== 'done' && task.status !== 'cancelled');
 	const activeExecution = $derived(task.executions[0] ?? null);
 	const isRunning = $derived(Boolean(activeExecution));
+	const ownerMembers = $derived(
+		groupMembers.filter((m) => m.groupId === task.project.groupId)
+	);
 
 	function openDetails() {
 		startEditing = false;
@@ -237,13 +232,13 @@
 		<div
 			class="flex items-center justify-between gap-sm font-serif text-caption text-muted-foreground"
 		>
-			<span class="flex items-center gap-xxs font-bold">
-				<Avatar.Root size="sm" class="size-6">
-					<Avatar.Image src={task.owner?.image} alt={ownerName} />
-					<Avatar.Fallback class="text-[10px]">{ownerInitials}</Avatar.Fallback>
-				</Avatar.Root>
-				{ownerName}
-			</span>
+			<TaskOwnerSelect
+				taskId={task.id}
+				ownerId={task.ownerId}
+				owner={task.owner}
+				members={ownerMembers}
+				compact
+			/>
 			<span class="flex items-center gap-sm">
 				{#if task.files.length > 0}
 					<span class="flex items-center gap-xxs">

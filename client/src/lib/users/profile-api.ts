@@ -1,5 +1,6 @@
-import { invalidateAll } from '$app/navigation';
+﻿import { invalidateAll } from '$app/navigation';
 import { toast } from 'svelte-sonner';
+import type { WorkSchedule } from './work-schedule';
 
 export interface ProfileFormValues {
 	name: string;
@@ -40,5 +41,22 @@ export async function uploadAvatar(file: File) {
 		return false;
 	}
 	toast.success('Foto de perfil atualizada.');
+	return true;
+}
+
+export async function updateWorkSchedule(schedule: WorkSchedule) {
+	const res = await fetch('/api/profile/work-schedule', {
+		method: 'PATCH',
+		headers: { 'content-type': 'application/json' },
+		body: JSON.stringify(schedule)
+	});
+	const data = await res.json().catch(() => ({}));
+	await invalidateAll();
+
+	if (!res.ok) {
+		toast.error(data.message ?? 'Não foi possível salvar o horário de funcionamento.');
+		return false;
+	}
+	toast.success('Horário de funcionamento atualizado.');
 	return true;
 }

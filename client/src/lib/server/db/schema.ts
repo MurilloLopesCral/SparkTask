@@ -65,6 +65,23 @@ export const user = pgTable('user', {
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
+/**
+ * Per-user business hours — cron pauses open executions outside this window.
+ * `workDays` uses ISO weekdays: 1=Monday … 7=Sunday.
+ * Times are local to `timezone` as `HH:mm` (24h).
+ */
+export const userWorkSchedule = pgTable('user_work_schedule', {
+	userId: uuid('user_id')
+		.primaryKey()
+		.references(() => user.id, { onDelete: 'cascade' }),
+	enabled: boolean('enabled').notNull().default(true),
+	timezone: varchar('timezone', { length: 64 }).notNull().default('America/Sao_Paulo'),
+	workDays: jsonb('work_days').$type<number[]>().notNull().default([1, 2, 3, 4, 5]),
+	startTime: varchar('start_time', { length: 5 }).notNull().default('08:00'),
+	endTime: varchar('end_time', { length: 5 }).notNull().default('18:00'),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
 export const session = pgTable('session', {
 	id: uuid('id').defaultRandom().primaryKey(),
 	expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
@@ -230,14 +247,22 @@ export const taskExecution = pgTable('task_execution', {
 // Relations
 // ---------------------------------------------------------------------------
 
-export const userRelations = relations(user, ({ many }) => ({
+export const userRelations = relations(user, ({ many, one }) => ({
 	sessions: many(session),
 	accounts: many(account),
 	groupMemberships: many(groupMember),
 	ownedTasks: many(task, { relationName: 'taskOwner' }),
 	createdTasks: many(task, { relationName: 'taskCreator' }),
 	uploadedFiles: many(file),
-	taskExecutions: many(taskExecution)
+	taskExecutions: many(taskExecution),
+	workSchedule: one(userWorkSchedule, {
+		fields: [user.id],
+		references: [userWorkSchedule.userId]
+	})
+}));
+
+export const userWorkScheduleRelations = relations(userWorkSchedule, ({ one }) => ({
+	user: one(user, { fields: [userWorkSchedule.userId], references: [user.id] })
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({

@@ -1,5 +1,6 @@
 ﻿import { invalidateAll } from '$app/navigation';
 import { toast } from 'svelte-sonner';
+import { celebration } from './celebration.svelte';
 
 type ExecutionAction = 'start' | 'pause' | 'finish';
 
@@ -36,32 +37,39 @@ async function postExecution(taskId: string, action: ExecutionAction) {
 		headers: { 'content-type': 'application/json' },
 		body: JSON.stringify({ action })
 	});
+	const data = await res.json().catch(() => ({}));
 	await invalidateAll();
 
 	if (!res.ok) {
-		const data = await res.json().catch(() => ({}));
 		toast.error(data.message ?? 'Não foi possível atualizar a execução.');
-		return false;
+		return { ok: false as const, data };
 	}
-	return true;
+	return { ok: true as const, data };
 }
 
 export async function startTaskExecution(taskId: string) {
-	const ok = await postExecution(taskId, 'start');
-	if (ok) toast.success('Execução iniciada.');
-	return ok;
+	const result = await postExecution(taskId, 'start');
+	if (result.ok) toast.success('Execução iniciada.');
+	return result.ok;
 }
 
 export async function pauseTaskExecution(taskId: string) {
-	const ok = await postExecution(taskId, 'pause');
-	if (ok) toast.success('Execução pausada.');
-	return ok;
+	const result = await postExecution(taskId, 'pause');
+	if (result.ok) toast.success('Execução pausada.');
+	return result.ok;
 }
 
 export async function finishTaskExecution(taskId: string) {
-	const ok = await postExecution(taskId, 'finish');
-	if (ok) toast.success('Execução encerrada. Tarefa em validação.');
-	return ok;
+	const result = await postExecution(taskId, 'finish');
+	if (!result.ok) return false;
+
+	if (result.data.status === 'done') {
+		celebration.celebrate(taskId);
+		toast.success('Validação concluída. Tarefa finalizada.');
+	} else {
+		toast.success('Execução encerrada. Tarefa em validação.');
+	}
+	return true;
 }
 
 /** Pause every open execution for the current user (end of day). */

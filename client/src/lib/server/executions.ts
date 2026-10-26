@@ -45,15 +45,10 @@ export async function startExecution(taskId: string, userId: string) {
 		.limit(1);
 
 	if (!row) return { ok: false as const, message: 'Tarefa não encontrada.', status: 404 };
-	if (
-		row.status === 'done' ||
-		row.status === 'cancelled' ||
-		row.status === 'pending_validation'
-	) {
+	if (row.status === 'done' || row.status === 'cancelled') {
 		return {
 			ok: false as const,
-			message:
-				'Não é possível executar uma tarefa em validação, finalizada ou cancelada.',
+			message: 'Não é possível executar uma tarefa finalizada ou cancelada.',
 			status: 400
 		};
 	}
@@ -72,7 +67,8 @@ export async function startExecution(taskId: string, userId: string) {
 			userId: taskExecution.userId
 		});
 
-	if (row.status !== 'in_progress') {
+	// Keep "Em Validação" while validating; otherwise move into in_progress.
+	if (row.status !== 'in_progress' && row.status !== 'pending_validation') {
 		await db
 			.update(task)
 			.set({ status: 'in_progress', updatedAt: new Date() })
@@ -114,10 +110,19 @@ export async function pauseExecution(taskId: string, userId: string) {
 		return { ok: false as const, message: 'Nenhuma execução em andamento.', status: 404 };
 	}
 
-	await db
-		.update(task)
-		.set({ status: 'stand_by', updatedAt: new Date() })
-		.where(eq(task.id, taskId));
+	const [row] = await db
+		.select({ status: task.status })
+		.from(task)
+		.where(eq(task.id, taskId))
+		.limit(1);
+
+	// Pausing during validation must not kick the task out of that column.
+	if (row?.status !== 'pending_validation') {
+		await db
+			.update(task)
+			.set({ status: 'stand_by', updatedAt: new Date() })
+			.where(eq(task.id, taskId));
+	}
 
 	return { ok: true as const, execution: closed };
 }
@@ -172,22 +177,26 @@ export async function finishExecution(taskId: string, userId: string) {
 			status: 400
 		};
 	}
-	if (row.status === 'pending_validation') {
-		return {
-			ok: false as const,
-			message: 'A tarefa já está em validação.',
-			status: 400
-		};
-	}
 
 	const closed = await closeOpenExecution(taskId, userId, 'completed');
-	// Finishing without an open timer is allowed — still sends to validation.
 	await autoCloseOpenExecutions(taskId);
 
-	await db
-		.update(task)
-		.set({ status: 'pending_validation', updatedAt: new Date() })
-		.where(eq(task.id, taskId));
+	// Validation finish → done; otherwise work finish → pending validation.
+	if (row.status === 'pending_validation') {
+		await db
+			.update(task)
+			.set({ status: 'done', finishedAt: new Date(), updatedAt: new Date() })
+			.where(eq(task.id, taskId));
+	} else {
+		await db
+			.update(task)
+			.set({ status: 'pending_validation', updatedAt: new Date() })
+			.where(eq(task.id, taskId));
+	}
 
-	return { ok: true as const, execution: closed };
+	return {
+		ok: true as const,
+		execution: closed,
+		status: row.status === 'pending_validation' ? ('done' as const) : ('pending_validation' as const)
+	};
 }

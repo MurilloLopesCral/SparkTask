@@ -48,5 +48,9 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		return json({ message: result.message }, { status: result.status });
 	}
 
-	return json({ success: true, execution: result.execution });
+	return json({
+		success: true,
+		execution: result.execution,
+		...('status' in result ? { status: result.status } : {})
+	});
 };
