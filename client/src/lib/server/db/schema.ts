@@ -3,6 +3,7 @@ import {
 	boolean,
 	date,
 	integer,
+	jsonb,
 	pgEnum,
 	pgTable,
 	primaryKey,
