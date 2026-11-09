@@ -1,10 +1,13 @@
 ﻿export type MarkdownAction =
 	| 'bold'
 	| 'italic'
+	| 'code'
+	| 'codeblock'
 	| 'unordered'
 	| 'ordered'
 	| 'tasklist'
 	| 'blockquote'
+	| 'table'
 	| 'h1'
 	| 'h2'
 	| 'h3'
@@ -18,7 +21,8 @@ export type MarkdownShortcut = {
 	action: MarkdownAction;
 	label: string;
 	mod: ShortcutMod;
-	key: string;
+	/** Physical key via KeyboardEvent.code (stable with Shift on PWA / layouts). */
+	code: string;
 	displayKeys: string[];
 };
 
@@ -32,43 +36,91 @@ const HEADING_PREFIX: Record<string, string> = {
 };
 
 export const MARKDOWN_SHORTCUTS: MarkdownShortcut[] = [
-	{ action: 'bold', label: 'Negrito', mod: 'mod', key: 'b', displayKeys: ['Mod', 'B'] },
-	{ action: 'italic', label: 'Itálico', mod: 'mod', key: 'i', displayKeys: ['Mod', 'I'] },
+	{ action: 'bold', label: 'Negrito', mod: 'mod', code: 'KeyB', displayKeys: ['Mod', 'B'] },
+	{ action: 'italic', label: 'Itálico', mod: 'mod', code: 'KeyI', displayKeys: ['Mod', 'I'] },
+	{ action: 'code', label: 'Código inline', mod: 'mod', code: 'KeyE', displayKeys: ['Mod', 'E'] },
+	{
+		action: 'codeblock',
+		label: 'Bloco de código',
+		mod: 'mod-shift',
+		code: 'KeyC',
+		displayKeys: ['Mod', 'Shift', 'C']
+	},
 	{
 		action: 'unordered',
 		label: 'Lista não ordenada',
 		mod: 'mod-shift',
-		key: '8',
+		code: 'Digit8',
 		displayKeys: ['Mod', 'Shift', '8']
 	},
 	{
 		action: 'ordered',
 		label: 'Lista ordenada',
 		mod: 'mod-shift',
-		key: '7',
+		code: 'Digit7',
 		displayKeys: ['Mod', 'Shift', '7']
 	},
 	{
 		action: 'tasklist',
 		label: 'Lista de tarefas',
 		mod: 'mod-shift',
-		key: '9',
+		code: 'Digit9',
 		displayKeys: ['Mod', 'Shift', '9']
 	},
 	{
 		action: 'blockquote',
 		label: 'Citação / herança',
 		mod: 'mod-shift',
-		key: '.',
+		code: 'Period',
 		displayKeys: ['Mod', 'Shift', '.']
 	},
-	{ action: 'h1', label: 'Título H1', mod: 'mod-alt', key: '1', displayKeys: ['Mod', 'Alt', '1'] },
-	{ action: 'h2', label: 'Título H2', mod: 'mod-alt', key: '2', displayKeys: ['Mod', 'Alt', '2'] },
-	{ action: 'h3', label: 'Título H3', mod: 'mod-alt', key: '3', displayKeys: ['Mod', 'Alt', '3'] },
-	{ action: 'h4', label: 'Título H4', mod: 'mod-alt', key: '4', displayKeys: ['Mod', 'Alt', '4'] },
-	{ action: 'h5', label: 'Título H5', mod: 'mod-alt', key: '5', displayKeys: ['Mod', 'Alt', '5'] },
-	{ action: 'h6', label: 'Título H6', mod: 'mod-alt', key: '6', displayKeys: ['Mod', 'Alt', '6'] }
+	{
+		action: 'table',
+		label: 'Tabela',
+		mod: 'mod-shift',
+		code: 'KeyT',
+		displayKeys: ['Mod', 'Shift', 'T']
+	},
+	{ action: 'h1', label: 'Título H1', mod: 'mod-alt', code: 'Digit1', displayKeys: ['Mod', 'Alt', '1'] },
+	{ action: 'h2', label: 'Título H2', mod: 'mod-alt', code: 'Digit2', displayKeys: ['Mod', 'Alt', '2'] },
+	{ action: 'h3', label: 'Título H3', mod: 'mod-alt', code: 'Digit3', displayKeys: ['Mod', 'Alt', '3'] },
+	{ action: 'h4', label: 'Título H4', mod: 'mod-alt', code: 'Digit4', displayKeys: ['Mod', 'Alt', '4'] },
+	{ action: 'h5', label: 'Título H5', mod: 'mod-alt', code: 'Digit5', displayKeys: ['Mod', 'Alt', '5'] },
+	{ action: 'h6', label: 'Título H6', mod: 'mod-alt', code: 'Digit6', displayKeys: ['Mod', 'Alt', '6'] }
 ];
+
+const TABLE_SNIPPET = `| Coluna 1 | Coluna 2 | Coluna 3 |
+| -------- | -------- | -------- |
+| Célula   | Célula   | Célula   |
+`;
+
+function insertBlock(
+	value: string,
+	start: number,
+	end: number,
+	block: string,
+	selectText?: string
+) {
+	const before = value.slice(0, start);
+	const after = value.slice(end);
+	const lead =
+		before.length === 0 ? '' : before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n';
+	const trail = after.length === 0 || after.startsWith('\n') ? '' : '\n';
+	const chunk = `${lead}${block}${trail}`;
+	const next = before + chunk + after;
+	const needle = selectText ?? 'Célula';
+	const at = chunk.indexOf(needle);
+	const cursorStart = before.length + (at >= 0 ? at : lead.length);
+	const cursorEnd = at >= 0 ? cursorStart + needle.length : cursorStart;
+	return { next, cursorStart, cursorEnd };
+}
+
+function wrapCodeBlock(value: string, start: number, end: number) {
+	const selected = value.slice(start, end);
+	const content = selected || 'código';
+	const block = `\`\`\`ts\n${content}\n\`\`\``;
+	return insertBlock(value, start, end, block, content === 'código' ? 'código' : content);
+}
 
 export function isApplePlatform(): boolean {
 	if (typeof navigator === 'undefined') return false;
@@ -211,6 +263,10 @@ export function applyMarkdownAction(
 			return wrapInline(value, start, end, '**', '**', 'negrito');
 		case 'italic':
 			return wrapInline(value, start, end, '*', '*', 'itálico');
+		case 'code':
+			return wrapInline(value, start, end, '`', '`', 'código');
+		case 'codeblock':
+			return wrapCodeBlock(value, start, end);
 		case 'unordered':
 			return toggleLinePrefix(value, start, end, '- ');
 		case 'ordered':
@@ -219,6 +275,8 @@ export function applyMarkdownAction(
 			return toggleTaskListPrefix(value, start, end);
 		case 'blockquote':
 			return toggleLinePrefix(value, start, end, '> ');
+		case 'table':
+			return insertBlock(value, start, end, TABLE_SNIPPET);
 		case 'h1':
 		case 'h2':
 		case 'h3':
@@ -229,16 +287,15 @@ export function applyMarkdownAction(
 	}
 }
 
-export function matchMarkdownShortcut(
-	event: KeyboardEvent
-): MarkdownAction | null {
-	const key = event.key.toLowerCase();
+export function matchMarkdownShortcut(event: KeyboardEvent): MarkdownAction | null {
+	// Use `code` (physical key). With Shift, `key` becomes `*`, `&`, `(` — breaks
+	// list shortcuts especially in installed PWAs / non-US layouts.
+	const code = event.code;
 	const mod = isApplePlatform() ? event.metaKey : event.ctrlKey;
 	if (!mod) return null;
 
 	for (const shortcut of MARKDOWN_SHORTCUTS) {
-		const keyMatch = shortcut.key.toLowerCase() === key;
-		if (!keyMatch) continue;
+		if (shortcut.code !== code) continue;
 
 		if (shortcut.mod === 'mod' && !event.shiftKey && !event.altKey) return shortcut.action;
 		if (shortcut.mod === 'mod-shift' && event.shiftKey && !event.altKey) return shortcut.action;
@@ -246,4 +303,32 @@ export function matchMarkdownShortcut(
 	}
 
 	return null;
+}
+
+/** Attach on the textarea `onkeydown` — more reliable than addEventListener in effects (PWA). */
+export function handleMarkdownTextareaKeydown(
+	event: KeyboardEvent,
+	value: string,
+	setValue: (next: string) => void
+) {
+	const action = matchMarkdownShortcut(event);
+	if (!action) return;
+
+	event.preventDefault();
+	event.stopPropagation();
+
+	const el = event.currentTarget;
+	if (!(el instanceof HTMLTextAreaElement)) return;
+
+	const { next, cursorStart, cursorEnd } = applyMarkdownAction(
+		value,
+		el.selectionStart,
+		el.selectionEnd,
+		action
+	);
+	setValue(next);
+	queueMicrotask(() => {
+		el.focus();
+		el.setSelectionRange(cursorStart, cursorEnd);
+	});
 }

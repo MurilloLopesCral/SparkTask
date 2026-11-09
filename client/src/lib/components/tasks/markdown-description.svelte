@@ -2,6 +2,8 @@
 	import { setContext } from 'svelte';
 	import SvelteMarkdown from 'svelte-markdown';
 	import MarkdownTaskListItem from './markdown-task-list-item.svelte';
+	import MarkdownTable from './markdown-table.svelte';
+	import MarkdownCode from './markdown-code.svelte';
 	import {
 		MARKDOWN_TODO_CONTEXT,
 		type MarkdownTodoContext
@@ -35,8 +37,10 @@
 	setContext(MARKDOWN_TODO_CONTEXT, ctx);
 
 	const renderers = {
-		listitem: MarkdownTaskListItem
+		listitem: MarkdownTaskListItem,
+		table: MarkdownTable,
+		code: MarkdownCode
 	};
 </script>
 
-<SvelteMarkdown {source} {renderers} />
+<SvelteMarkdown {source} {renderers} options={{ gfm: true, breaks: true }} />

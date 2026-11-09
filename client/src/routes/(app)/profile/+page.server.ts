@@ -1,7 +1,15 @@
-﻿import { getWorkSchedule } from '$lib/server/work-schedule';
+﻿import { listMcpKeysForUser } from '$lib/server/mcp/keys';
+import { getUserGroups } from '$lib/server/me';
+import { getWorkSchedule } from '$lib/server/work-schedule';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-	const schedule = await getWorkSchedule(locals.user!.id);
-	return { user: locals.user!, schedule };
+	const userId = locals.user!.id;
+	const [schedule, mcpKeys, groups] = await Promise.all([
+		getWorkSchedule(userId),
+		listMcpKeysForUser(userId),
+		getUserGroups(userId)
+	]);
+
+	return { user: locals.user!, schedule, mcpKeys, groups };
 };

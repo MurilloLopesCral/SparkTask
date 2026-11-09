@@ -1,5 +1,17 @@
 ﻿<script lang="ts">
-	import { Bold, Italic, List, ListOrdered, ListTodo, Quote, Heading, Keyboard } from '@lucide/svelte';
+	import {
+		Bold,
+		Italic,
+		Code,
+		SquareCode,
+		List,
+		ListOrdered,
+		ListTodo,
+		Quote,
+		Heading,
+		Keyboard,
+		Table
+	} from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
@@ -7,7 +19,6 @@
 	import {
 		applyMarkdownAction,
 		formatShortcutKey,
-		matchMarkdownShortcut,
 		MARKDOWN_SHORTCUTS,
 		type MarkdownAction
 	} from '$lib/tasks/markdown-editor';
@@ -42,20 +53,6 @@
 			el.setSelectionRange(cursorStart, cursorEnd);
 		});
 	}
-
-	function onTextareaKeydown(event: KeyboardEvent) {
-		const action = matchMarkdownShortcut(event);
-		if (!action) return;
-		event.preventDefault();
-		runAction(action);
-	}
-
-	$effect(() => {
-		const el = textareaEl;
-		if (!el) return;
-		el.addEventListener('keydown', onTextareaKeydown);
-		return () => el.removeEventListener('keydown', onTextareaKeydown);
-	});
 </script>
 
 <div
@@ -82,6 +79,26 @@
 		title="Itálico"
 	>
 		<Italic />
+	</Button>
+	<Button
+		type="button"
+		variant="ghost"
+		size="icon-xs"
+		onclick={() => runAction('code')}
+		aria-label="Código inline"
+		title="Código inline (` `)"
+	>
+		<Code />
+	</Button>
+	<Button
+		type="button"
+		variant="ghost"
+		size="icon-xs"
+		onclick={() => runAction('codeblock')}
+		aria-label="Bloco de código"
+		title="Bloco de código (``` )"
+	>
+		<SquareCode />
 	</Button>
 
 	<span class="mx-xxs h-4 w-px bg-frame" aria-hidden="true"></span>
@@ -125,6 +142,16 @@
 		title="Citação / herança (>)"
 	>
 		<Quote />
+	</Button>
+	<Button
+		type="button"
+		variant="ghost"
+		size="icon-xs"
+		onclick={() => runAction('table')}
+		aria-label="Tabela"
+		title="Inserir tabela"
+	>
+		<Table />
 	</Button>
 
 	<span class="mx-xxs h-4 w-px bg-frame" aria-hidden="true"></span>

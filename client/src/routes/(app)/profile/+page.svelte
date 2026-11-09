@@ -11,6 +11,7 @@
 		WORK_WEEKDAYS,
 		type WorkSchedule
 	} from '$lib/users/work-schedule';
+	import McpKeysSection from '$lib/components/profile/mcp-keys-section.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -237,4 +238,6 @@
 			{savingSchedule ? 'Salvando…' : 'Salvar horário'}
 		</Button>
 	</form>
+
+	<McpKeysSection keys={data.mcpKeys} groups={data.groups} />
 </div>

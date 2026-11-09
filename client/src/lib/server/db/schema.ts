@@ -170,6 +170,28 @@ export const groupMember = pgTable(
 	(t) => [primaryKey({ columns: [t.groupId, t.memberId] })]
 );
 
+/**
+ * Personal MCP / agent API keys. Plaintext secret is shown once at creation;
+ * only the SHA-256 hash is stored. Each key is bound to one group + scopes.
+ */
+export const mcpAccessKey = pgTable('mcp_access_key', {
+	id: uuid('id').defaultRandom().primaryKey(),
+	userId: uuid('user_id')
+		.notNull()
+		.references(() => user.id, { onDelete: 'cascade' }),
+	groupId: uuid('group_id')
+		.notNull()
+		.references(() => group.id, { onDelete: 'cascade' }),
+	name: varchar('name', { length: 80 }).notNull(),
+	/** Public prefix for UI lists, e.g. `spk_a1b2c3d4`. */
+	keyPrefix: varchar('key_prefix', { length: 16 }).notNull(),
+	keyHash: text('key_hash').notNull().unique(),
+	scopes: jsonb('scopes').$type<string[]>().notNull().default([]),
+	lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+	revokedAt: timestamp('revoked_at', { withTimezone: true }),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+});
+
 // ---------------------------------------------------------------------------
 // Domain — projects & tasks
 // ---------------------------------------------------------------------------
@@ -256,10 +278,16 @@ export const userRelations = relations(user, ({ many, one }) => ({
 	createdTasks: many(task, { relationName: 'taskCreator' }),
 	uploadedFiles: many(file),
 	taskExecutions: many(taskExecution),
+	mcpAccessKeys: many(mcpAccessKey),
 	workSchedule: one(userWorkSchedule, {
 		fields: [user.id],
 		references: [userWorkSchedule.userId]
 	})
+}));
+
+export const mcpAccessKeyRelations = relations(mcpAccessKey, ({ one }) => ({
+	user: one(user, { fields: [mcpAccessKey.userId], references: [user.id] }),
+	group: one(group, { fields: [mcpAccessKey.groupId], references: [group.id] })
 }));
 
 export const userWorkScheduleRelations = relations(userWorkSchedule, ({ one }) => ({
@@ -277,7 +305,8 @@ export const accountRelations = relations(account, ({ one }) => ({
 export const groupRelations = relations(group, ({ many }) => ({
 	members: many(groupMember),
 	projects: many(project),
-	invites: many(invite)
+	invites: many(invite),
+	mcpAccessKeys: many(mcpAccessKey)
 }));
 
 export const inviteRelations = relations(invite, ({ one }) => ({

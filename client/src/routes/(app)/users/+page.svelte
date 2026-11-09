@@ -9,6 +9,8 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { Delete02Icon, Copy01Icon } from '@hugeicons/core-free-icons';
+	import { Copy } from '@lucide/svelte';
+	import { toast } from 'svelte-sonner';
 	import InviteUserSheet from '$lib/components/users/invite-user-sheet.svelte';
 	import { revokeInvite, removeMember } from '$lib/users/api';
 	import { formatDate } from '$lib/tasks/format';
@@ -25,6 +27,10 @@
 		member: 'Membro'
 	};
 
+	const selectedGroup = $derived(
+		data.ownedGroups.find((g) => g.id === data.selectedGroupId) ?? data.ownedGroups[0]
+	);
+
 	function setGroup(next: string) {
 		goto(resolve(`/users?group=${next}`), { replaceState: true, keepFocus: true, noScroll: true });
 	}
@@ -35,6 +41,16 @@
 		copiedInviteId = inviteId;
 		setTimeout(() => (copiedInviteId = null), 2000);
 	}
+
+	async function copyGroupId() {
+		if (!selectedGroup?.id) return;
+		try {
+			await navigator.clipboard.writeText(selectedGroup.id);
+			toast.success('ID do grupo copiado.');
+		} catch {
+			toast.error('Não foi possível copiar o ID.');
+		}
+	}
 </script>
 
 <svelte:head><title>Grupos — SparkTask</title></svelte:head>
@@ -43,13 +59,33 @@
 	<div
 		class="mb-lg flex flex-col gap-md sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
 	>
-		<h1 class="font-display text-h1 text-pretty uppercase">Grupos</h1>
+		<div class="flex min-w-0 flex-wrap items-center gap-sm">
+			<h1 class="font-display text-h1 text-pretty uppercase">Grupos</h1>
+			{#if selectedGroup}
+				<Tooltip.Root>
+					<Tooltip.Trigger>
+						{#snippet child({ props })}
+							<button
+								{...props}
+								type="button"
+								class="grid size-11 shrink-0 cursor-pointer place-items-center sm:size-8"
+								onclick={copyGroupId}
+								aria-label="Copiar ID do grupo"
+							>
+								<Copy class="size-4" />
+							</button>
+						{/snippet}
+					</Tooltip.Trigger>
+					<Tooltip.Content>Copiar ID do grupo</Tooltip.Content>
+				</Tooltip.Root>
+			{/if}
+		</div>
 
 		<div class="flex w-full flex-wrap items-center gap-sm sm:w-auto sm:gap-md">
 			{#if data.ownedGroups.length > 1}
 				<Select.Root type="single" value={data.selectedGroupId} onValueChange={setGroup}>
 					<Select.Trigger class="min-h-11 w-full sm:w-48">
-						{data.ownedGroups.find((g) => g.id === data.selectedGroupId)?.name}
+						{selectedGroup?.name}
 					</Select.Trigger>
 					<Select.Content>
 						{#each data.ownedGroups as g (g.id)}

@@ -33,7 +33,7 @@
 	import { formatDate, formatFileSize, dueDateStatusClass } from '$lib/tasks/format';
 	import { getInitials } from '$lib/users/format';
 	import { saveTask, saveTaskDescription, setTaskStatus } from '$lib/tasks/api';
-	import { toggleMarkdownTaskAt } from '$lib/tasks/markdown-editor';
+	import { handleMarkdownTextareaKeydown, toggleMarkdownTaskAt } from '$lib/tasks/markdown-editor';
 	import {
 		uploadTaskFile,
 		removeTaskFile,
@@ -253,7 +253,7 @@
 <AlertDialog.Root bind:open>
 	<AlertDialog.Content
 		interactOutsideBehavior="close"
-		class="max-h-[min(90dvh,100%)] w-[calc(100%-1.5rem)] max-w-[32rem] overflow-y-auto overscroll-contain sm:w-full"
+		class="max-h-[min(90dvh,100%)] w-[calc(100%-1.5rem)] overflow-y-auto overscroll-contain data-[size=default]:max-w-[calc(100%-1.5rem)] data-[size=default]:sm:max-w-[48rem] sm:w-full"
 		onpaste={handlePaste}
 	>
 		<AlertDialog.Header class="flex w-full flex-row items-start justify-between">
@@ -398,12 +398,18 @@
 					<textarea
 						bind:this={descriptionEl}
 						class="font-mono text-input border-t-0"
-						rows="5"
+						rows="8"
 						bind:value={form.description}
+						onkeydown={(event) =>
+							handleMarkdownTextareaKeydown(
+								event,
+								form.description,
+								(next) => (form.description = next)
+							)}
 					></textarea>
 				</div>
 				<span class="font-serif text-caption text-muted-foreground">
-					Aceita Markdown, inclusive ToDos (- [ ]). Ctrl+V (⌘V) cola anexos aqui ou com o diálogo
+					Aceita Markdown (ToDos, tabelas, código). Ctrl+V (⌘V) cola anexos aqui ou com o diálogo
 					focado.
 				</span>
 			</div>

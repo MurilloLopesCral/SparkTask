@@ -232,16 +232,18 @@
 		{/if}
 
 		<div
-			class="flex items-center justify-between gap-sm font-serif text-caption text-muted-foreground"
+			class="flex items-end justify-between gap-sm font-serif text-caption text-muted-foreground"
 		>
-			<TaskOwnerSelect
-				taskId={task.id}
-				ownerId={task.ownerId}
-				owner={task.owner}
-				members={ownerMembers}
-				compact
-			/>
-			<span class="flex items-center gap-sm">
+			<div class="min-w-0 flex-1">
+				<TaskOwnerSelect
+					taskId={task.id}
+					ownerId={task.ownerId}
+					owner={task.owner}
+					members={ownerMembers}
+					compact
+				/>
+			</div>
+			<div class="flex shrink-0 flex-col items-end gap-xxs">
 				{#if task.files.length > 0}
 					<span class="flex items-center gap-xxs">
 						<HugeiconsIcon icon={Attachment01Icon} strokeWidth={2} class="size-3" />
@@ -257,7 +259,7 @@
 						{dateLabel}
 					</span>
 				{/if}
-			</span>
+			</div>
 		</div>
 	</Card>
 	<TaskConfettiBurst taskId={task.id} />

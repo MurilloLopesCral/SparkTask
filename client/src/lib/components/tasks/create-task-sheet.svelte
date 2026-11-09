@@ -13,6 +13,7 @@
 		TASK_KIND_META
 	} from '$lib/tasks/constants';
 	import { createTask } from '$lib/tasks/api';
+	import { handleMarkdownTextareaKeydown } from '$lib/tasks/markdown-editor';
 	import MarkdownToolbar from './markdown-toolbar.svelte';
 
 	let {
@@ -99,12 +100,20 @@
 						<MarkdownToolbar bind:value={form.description} bind:textareaEl={descriptionEl} />
 						<textarea
 							bind:this={descriptionEl}
-							class="text-input border-t-0"
+							class="font-mono text-input border-t-0"
 							rows="4"
 							bind:value={form.description}
+							onkeydown={(event) =>
+								handleMarkdownTextareaKeydown(
+									event,
+									form.description,
+									(next) => (form.description = next)
+								)}
 						></textarea>
 					</div>
-					<span class="font-serif text-caption text-muted-foreground">Aceita Markdown.</span>
+					<span class="font-serif text-caption text-muted-foreground"
+						>Aceita Markdown (ToDos, tabelas, código).</span
+					>
 				</div>
 
 				<label class="flex flex-col gap-xxs">
