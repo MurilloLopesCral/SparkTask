@@ -21,7 +21,7 @@ O **grupo** fica atrelado à chave na criação (melhor para Claude Desktop, que
 |------|--------|
 | `whoami` | — |
 | `list_projects` | `projects:read` |
-| `list_tasks` | `tasks:read` |
+| `list_tasks` | `tasks:read` — filtros: status, projectId, ownerId, mine, search, updatedFrom/To, finishedFrom/To, dueBefore/After, orderBy, order, limit |
 | `get_task` | `tasks:read` |
 | `create_task` | `tasks:write` |
 | `update_task_status` | `tasks:write` |

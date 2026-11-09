@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, inArray, or, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../db';
 import { project, task } from '../db/schema';
@@ -13,6 +13,9 @@ import {
 } from '../tasks';
 import type { McpAuthContext } from './keys';
 import { hasScope, type McpScope } from './scopes';
+
+const TZ = sql.raw("'America/Sao_Paulo'");
+const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 type JsonSchema = Record<string, unknown>;
 
@@ -39,7 +42,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
 	{
 		name: 'list_tasks',
 		description:
-			'Lista tarefas do grupo. Filtros (status, projectId, search em título/descrição) aplicam antes do limit.',
+			'Lista tarefas do grupo com filtros ricos para insights/relatórios. Todos os filtros aplicam no WHERE antes do limit. Datas em YYYY-MM-DD (fuso America/Sao_Paulo para updated/finished). Use dueBefore para atrasadas; mine:true = tarefas do usuário da chave.',
 		requiredScope: 'tasks:read',
 		inputSchema: {
 			type: 'object',
@@ -59,7 +62,27 @@ export const MCP_TOOLS: McpToolDefinition[] = [
 					}
 				},
 				projectId: { type: 'string', format: 'uuid' },
+				ownerId: { type: 'string', format: 'uuid' },
+				mine: {
+					type: 'boolean',
+					description: 'Se true, filtra pelo usuário da access key (sobrescreve ownerId).'
+				},
 				search: { type: 'string', maxLength: 120 },
+				updatedFrom: { type: 'string', description: 'YYYY-MM-DD' },
+				updatedTo: { type: 'string', description: 'YYYY-MM-DD' },
+				finishedFrom: { type: 'string', description: 'YYYY-MM-DD' },
+				finishedTo: { type: 'string', description: 'YYYY-MM-DD' },
+				dueBefore: {
+					type: 'string',
+					description: 'YYYY-MM-DD — prazo até esta data (útil para atrasadas).'
+				},
+				dueAfter: { type: 'string', description: 'YYYY-MM-DD — prazo a partir desta data.' },
+				orderBy: {
+					type: 'string',
+					enum: ['updatedAt', 'dueDate', 'finishedAt'],
+					default: 'updatedAt'
+				},
+				order: { type: 'string', enum: ['asc', 'desc'], default: 'desc' },
 				limit: { type: 'integer', minimum: 1, maximum: 100, default: 30 }
 			},
 			additionalProperties: false
@@ -207,7 +230,17 @@ const listTasksSchema = z.object({
 		)
 		.optional(),
 	projectId: z.string().uuid().optional(),
+	ownerId: z.string().uuid().optional(),
+	mine: z.boolean().optional(),
 	search: z.string().max(120).optional(),
+	updatedFrom: dateString.optional(),
+	updatedTo: dateString.optional(),
+	finishedFrom: dateString.optional(),
+	finishedTo: dateString.optional(),
+	dueBefore: dateString.optional(),
+	dueAfter: dateString.optional(),
+	orderBy: z.enum(['updatedAt', 'dueDate', 'finishedAt']).optional(),
+	order: z.enum(['asc', 'desc']).optional(),
 	limit: z.number().int().min(1).max(100).optional()
 });
 
@@ -282,15 +315,51 @@ export async function callMcpTool(
 				conditions.push(inArray(task.status, parsed.data.status));
 			}
 
+			const ownerFilter = parsed.data.mine ? ctx.userId : parsed.data.ownerId;
+			if (ownerFilter) conditions.push(eq(task.ownerId, ownerFilter));
+
 			const search = parsed.data.search?.trim();
 			if (search) {
 				const term = `%${search.replace(/[\\%_]/g, '\\$&')}%`;
 				conditions.push(or(ilike(task.title, term), ilike(task.description, term))!);
 			}
 
+			if (parsed.data.updatedFrom) {
+				conditions.push(
+					gte(sql`((${task.updatedAt} AT TIME ZONE ${TZ})::date)`, parsed.data.updatedFrom)
+				);
+			}
+			if (parsed.data.updatedTo) {
+				conditions.push(
+					lte(sql`((${task.updatedAt} AT TIME ZONE ${TZ})::date)`, parsed.data.updatedTo)
+				);
+			}
+			if (parsed.data.finishedFrom) {
+				conditions.push(
+					gte(sql`((${task.finishedAt} AT TIME ZONE ${TZ})::date)`, parsed.data.finishedFrom)
+				);
+			}
+			if (parsed.data.finishedTo) {
+				conditions.push(
+					lte(sql`((${task.finishedAt} AT TIME ZONE ${TZ})::date)`, parsed.data.finishedTo)
+				);
+			}
+			if (parsed.data.dueAfter) conditions.push(gte(task.dueDate, parsed.data.dueAfter));
+			if (parsed.data.dueBefore) conditions.push(lte(task.dueDate, parsed.data.dueBefore));
+
+			const orderBy = parsed.data.orderBy ?? 'updatedAt';
+			const orderDir = parsed.data.order ?? 'desc';
+			const orderColumn =
+				orderBy === 'dueDate'
+					? task.dueDate
+					: orderBy === 'finishedAt'
+						? task.finishedAt
+						: task.updatedAt;
+			const orderExpr = orderDir === 'asc' ? asc(orderColumn) : desc(orderColumn);
+
 			const rows = await db.query.task.findMany({
 				where: and(...conditions),
-				orderBy: [desc(task.updatedAt)],
+				orderBy: [orderExpr],
 				limit: parsed.data.limit ?? 30,
 				columns: {
 					id: true,
@@ -304,7 +373,8 @@ export async function callMcpTool(
 					finishedAt: true,
 					projectId: true,
 					ownerId: true,
-					updatedAt: true
+					updatedAt: true,
+					createdAt: true
 				},
 				with: {
 					project: { columns: { id: true, name: true } },
@@ -312,7 +382,25 @@ export async function callMcpTool(
 				}
 			});
 
-			return toolResult({ tasks: rows });
+			return toolResult({
+				tasks: rows,
+				meta: {
+					count: rows.length,
+					limit: parsed.data.limit ?? 30,
+					orderBy,
+					order: orderDir,
+					filters: {
+						ownerId: ownerFilter ?? null,
+						mine: parsed.data.mine ?? false,
+						updatedFrom: parsed.data.updatedFrom ?? null,
+						updatedTo: parsed.data.updatedTo ?? null,
+						finishedFrom: parsed.data.finishedFrom ?? null,
+						finishedTo: parsed.data.finishedTo ?? null,
+						dueBefore: parsed.data.dueBefore ?? null,
+						dueAfter: parsed.data.dueAfter ?? null
+					}
+				}
+			});
 		}
 		case 'get_task': {
 			const taskId = typeof args.taskId === 'string' ? args.taskId : '';
