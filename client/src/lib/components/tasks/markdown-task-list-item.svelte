@@ -1,5 +1,5 @@
 ﻿<script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, untrack, type Snippet } from 'svelte';
 	import {
 		MARKDOWN_TODO_CONTEXT,
 		type MarkdownTodoContext
@@ -7,14 +7,17 @@
 
 	let {
 		task = false,
-		checked = false
+		checked = false,
+		children
 	}: {
 		task?: boolean;
 		checked?: boolean;
+		children?: Snippet;
 	} = $props();
 
 	const todos = getContext<MarkdownTodoContext | undefined>(MARKDOWN_TODO_CONTEXT);
-	const index = task && todos ? todos.claimIndex() : -1;
+	// One index per list-item instance; claim once at create time.
+	const index = untrack(() => (task && todos ? todos.claimIndex() : -1));
 
 	function handleChange(event: Event) {
 		const input = event.currentTarget as HTMLInputElement;
@@ -36,6 +39,6 @@
 		/>
 	{/if}
 	<span class="task-list-content">
-		<slot />
+		{@render children?.()}
 	</span>
 </li>

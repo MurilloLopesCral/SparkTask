@@ -1,4 +1,5 @@
 ﻿<script lang="ts">
+	import { untrack } from 'svelte';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
@@ -66,8 +67,9 @@
 	let togglingTodo = $state(false);
 	let executionsOpen = $state(false);
 	let copyingImageId = $state<string | null>(null);
-	let form = $state(toFormState(task));
-	let viewDescription = $state(task.description ?? '');
+	// Seed once; open/effect below refreshes — avoid poll wiping in-progress edits.
+	let form = $state(untrack(() => toFormState(task)));
+	let viewDescription = $state(untrack(() => task.description ?? ''));
 	let descriptionEl = $state<HTMLTextAreaElement | null>(null);
 
 	function toFormState(t: VisibleTask) {

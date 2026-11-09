@@ -1,4 +1,5 @@
 ﻿<script lang="ts">
+	import { untrack } from 'svelte';
 	import * as Avatar from '$lib/components/ui/avatar/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
@@ -30,7 +31,7 @@
 
 	let open = $state(false);
 	let saving = $state(false);
-	let value = $state(ownerId ?? '');
+	let value = $state(untrack(() => ownerId ?? ''));
 
 	$effect(() => {
 		value = ownerId ?? '';

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { superForm } from 'sveltekit-superforms';
 	import { zod4Client } from 'sveltekit-superforms/adapters';
 	import { signupSchema } from '$lib/schemas/auth';
@@ -6,9 +7,12 @@
 
 	let { data }: PageProps = $props();
 
-	const { form, errors, constraints, enhance, delayed, message } = superForm(data.form, {
-		validators: zod4Client(signupSchema)
-	});
+	const { form, errors, constraints, enhance, delayed, message } = superForm(
+		untrack(() => data.form),
+		{
+			validators: zod4Client(signupSchema)
+		}
+	);
 </script>
 
 <svelte:head><title>Criar conta — SparkTask</title></svelte:head>

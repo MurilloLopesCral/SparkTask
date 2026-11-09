@@ -1,4 +1,5 @@
 ﻿<script lang="ts">
+	import { untrack } from 'svelte';
 	import * as Sheet from '$lib/components/ui/sheet/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import {
@@ -12,8 +13,8 @@
 	let { project, open = $bindable(false) }: { project: VisibleProject; open?: boolean } = $props();
 
 	let submitting = $state(false);
-	let form = $state(toFormState(project));
-	let imageUrl = $state<string | null>(project.image ?? null);
+	let form = $state(untrack(() => toFormState(project)));
+	let imageUrl = $state<string | null>(untrack(() => project.image ?? null));
 	let pendingFile = $state<File | null>(null);
 	let cleared = $state(false);
 	let wasOpen = false;

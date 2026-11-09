@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, or, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../db';
 import { project, task } from '../db/schema';
@@ -39,7 +39,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
 	{
 		name: 'list_tasks',
 		description:
-			'Lista tarefas do grupo. Filtros opcionais: status, projectId, search (título/descrição).',
+			'Lista tarefas do grupo. Filtros (status, projectId, search em título/descrição) aplicam antes do limit.',
 		requiredScope: 'tasks:read',
 		inputSchema: {
 			type: 'object',
@@ -271,7 +271,7 @@ export async function callMcpTool(
 			const projectIds = await projectIdsForGroup(ctx.groupId);
 			if (projectIds.length === 0) return toolResult({ tasks: [] });
 
-			const conditions = [inArray(task.projectId, projectIds)];
+			const conditions: SQL[] = [inArray(task.projectId, projectIds)];
 			if (parsed.data.projectId) {
 				if (!projectIds.includes(parsed.data.projectId)) {
 					return toolError('projectId fora do grupo desta chave.');
@@ -282,7 +282,13 @@ export async function callMcpTool(
 				conditions.push(inArray(task.status, parsed.data.status));
 			}
 
-			let rows = await db.query.task.findMany({
+			const search = parsed.data.search?.trim();
+			if (search) {
+				const term = `%${search.replace(/[\\%_]/g, '\\$&')}%`;
+				conditions.push(or(ilike(task.title, term), ilike(task.description, term))!);
+			}
+
+			const rows = await db.query.task.findMany({
 				where: and(...conditions),
 				orderBy: [desc(task.updatedAt)],
 				limit: parsed.data.limit ?? 30,
@@ -305,15 +311,6 @@ export async function callMcpTool(
 					owner: { columns: { id: true, name: true, email: true } }
 				}
 			});
-
-			const search = parsed.data.search?.trim().toLowerCase();
-			if (search) {
-				rows = rows.filter(
-					(t) =>
-						t.title.toLowerCase().includes(search) ||
-						t.description?.toLowerCase().includes(search)
-				);
-			}
 
 			return toolResult({ tasks: rows });
 		}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { superForm } from 'sveltekit-superforms';
 	import { zod4Client } from 'sveltekit-superforms/adapters';
 	import { loginSchema } from '$lib/schemas/auth';
@@ -6,9 +7,12 @@
 
 	let { data }: PageProps = $props();
 
-	const { form, errors, constraints, enhance, delayed, message } = superForm(data.form, {
-		validators: zod4Client(loginSchema)
-	});
+	const { form, errors, constraints, enhance, delayed, message } = superForm(
+		untrack(() => data.form),
+		{
+			validators: zod4Client(loginSchema)
+		}
+	);
 
 	// Fanned preview of tinted project cards — the same visual language the
 	// real project list will use, foreshadowed here rather than decoration.
