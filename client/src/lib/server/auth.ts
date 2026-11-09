@@ -50,6 +50,20 @@ export const auth = betterAuth({
 	user: {
 		changeEmail: {
 			enabled: true
+		},
+		additionalFields: {
+			isSystemAdmin: {
+				type: 'boolean',
+				required: false,
+				defaultValue: false,
+				input: false
+			},
+			isActive: {
+				type: 'boolean',
+				required: false,
+				defaultValue: true,
+				input: false
+			}
 		}
 	},
 	// Must be the last plugin — forwards Set-Cookie from server-side auth.api.*

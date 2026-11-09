@@ -71,6 +71,13 @@
       "when": 1789496400000,
       "tag": "0009_mcp_access_key",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789582800000,
+      "tag": "0010_user_is_system_admin",
+      "breakpoints": true
     }
   ]
 }

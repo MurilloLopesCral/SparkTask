@@ -7,7 +7,7 @@
 	const isGroupOwner = $derived(data.groups.some((g) => g.role === 'owner'));
 </script>
 
-<Navbar user={data.user} {isGroupOwner} />
+<Navbar user={data.user} {isGroupOwner} isSystemAdmin={data.isSystemAdmin} />
 <main>
 	{@render children()}
 </main>

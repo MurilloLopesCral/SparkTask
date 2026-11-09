@@ -62,6 +62,8 @@ export const user = pgTable('user', {
 	emailVerified: boolean('email_verified').notNull().default(false),
 	image: text('image'),
 	isActive: boolean('is_active').notNull().default(true),
+	/** Platform admin — create groups; set manually in DB (typically one user). */
+	isSystemAdmin: boolean('is_system_admin').notNull().default(false),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
