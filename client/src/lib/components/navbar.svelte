@@ -11,7 +11,9 @@
 		UserGroupIcon,
 		UserIcon,
 		Logout01Icon,
-		Settings01Icon
+		Settings01Icon,
+		Calendar03Icon,
+		RepeatIcon
 	} from '@hugeicons/core-free-icons';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import * as Avatar from '$lib/components/ui/avatar/index.js';
@@ -33,6 +35,8 @@
 		{ href: '/home', label: 'Início', icon: Home01Icon },
 		{ href: '/projects', label: 'Projetos', icon: Folder01Icon },
 		{ href: '/tasks', label: 'Tarefas', icon: Task01Icon },
+		{ href: '/calendar', label: 'Calendário', icon: Calendar03Icon },
+		{ href: '/recurrences', label: 'Recorrências', icon: RepeatIcon },
 		{ href: '/users', label: 'Grupos', icon: UserGroupIcon },
 		{ href: '/admin', label: 'Admin', icon: Settings01Icon }
 	] as const;

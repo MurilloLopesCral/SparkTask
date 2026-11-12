@@ -78,6 +78,13 @@
       "when": 1789582800000,
       "tag": "0010_user_is_system_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1789669200000,
+      "tag": "0011_task_recurrence",
+      "breakpoints": true
     }
   ]
 }

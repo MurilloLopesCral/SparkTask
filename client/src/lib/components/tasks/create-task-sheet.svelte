@@ -18,18 +18,24 @@
 
 	let {
 		projects,
-		groupMembers
+		groupMembers,
+		open = $bindable(false),
+		showTrigger = true,
+		initialDueDate = ''
 	}: {
 		projects: { id: string; name: string; groupId: string }[];
 		groupMembers: { groupId: string; id: string; name: string | null; email: string }[];
+		open?: boolean;
+		showTrigger?: boolean;
+		/** Prefill prazo when creating from the calendar. */
+		initialDueDate?: string;
 	} = $props();
 
-	let open = $state(false);
 	let submitting = $state(false);
 	let form = $state(emptyForm());
 	let descriptionEl = $state<HTMLTextAreaElement | null>(null);
 
-	function emptyForm() {
+	function emptyForm(dueDate = '') {
 		return {
 			title: '',
 			description: '',
@@ -37,7 +43,7 @@
 			priority: 'medium',
 			type: 'mandatory',
 			kind: 'improvement',
-			dueDate: '',
+			dueDate,
 			ownerId: ''
 		};
 	}
@@ -47,8 +53,6 @@
 		groupMembers.filter((m) => m.groupId === selectedProject?.groupId)
 	);
 
-	// Selecting a project the current owner doesn't belong to would silently
-	// send a stale ownerId — reset it whenever the pool of valid owners changes.
 	$effect(() => {
 		if (form.ownerId && !availableOwners.some((m) => m.id === form.ownerId)) {
 			form.ownerId = '';
@@ -70,18 +74,25 @@
 			submitting = false;
 		}
 	}
+
+	function handleOpenChange(next: boolean) {
+		open = next;
+		if (next) form = emptyForm(initialDueDate);
+	}
 </script>
 
-<Sheet.Root bind:open>
-	<Sheet.Trigger>
-		{#snippet child({ props })}
-			<Button {...props}>
-				<HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
-				Criar tarefa
-			</Button>
-		{/snippet}
-	</Sheet.Trigger>
-	<Sheet.Content class="flex w-full flex-col sm:max-w-[24rem]">
+<Sheet.Root {open} onOpenChange={handleOpenChange}>
+	{#if showTrigger}
+		<Sheet.Trigger>
+			{#snippet child({ props })}
+				<Button {...props}>
+					<HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
+					Criar tarefa
+				</Button>
+			{/snippet}
+		</Sheet.Trigger>
+	{/if}
+	<Sheet.Content class="flex w-full flex-col overscroll-contain sm:max-w-[24rem]">
 		<form onsubmit={handleSubmit} class="flex h-full flex-col">
 			<Sheet.Header>
 				<Sheet.Title>Nova tarefa</Sheet.Title>
@@ -91,7 +102,7 @@
 			<div class="flex flex-1 flex-col gap-md overflow-y-auto px-lg">
 				<label class="flex flex-col gap-xxs">
 					<span class="font-sans text-ui-label uppercase">Título</span>
-					<input class="text-input" bind:value={form.title} required />
+					<input class="text-input" name="title" autocomplete="off" bind:value={form.title} required />
 				</label>
 
 				<div class="flex flex-col gap-xxs">
@@ -101,6 +112,7 @@
 						<textarea
 							bind:this={descriptionEl}
 							class="font-mono text-input border-t-0"
+							name="description"
 							rows="4"
 							bind:value={form.description}
 							onkeydown={(event) =>
@@ -194,7 +206,7 @@
 
 				<label class="flex flex-col gap-xxs">
 					<span class="font-sans text-ui-label uppercase">Prazo</span>
-					<input type="date" class="text-input" bind:value={form.dueDate} />
+					<input type="date" class="text-input" name="dueDate" bind:value={form.dueDate} />
 				</label>
 			</div>
 

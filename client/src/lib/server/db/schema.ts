@@ -50,6 +50,12 @@ export const taskExecutionEndReasonEnum = pgEnum('task_execution_end_reason', [
 // Mirrors Cloudinary's own resource_type — required to call the destroy API later.
 export const fileResourceTypeEnum = pgEnum('file_resource_type', ['image', 'video', 'raw']);
 
+export const recurrenceFrequencyEnum = pgEnum('recurrence_frequency', [
+	'daily',
+	'weekly',
+	'monthly'
+]);
+
 // ---------------------------------------------------------------------------
 // Auth (better-auth core schema — user/session/account/verification)
 // https://www.better-auth.com/docs/concepts/database#core-schema
@@ -212,6 +218,39 @@ export const project = pgTable('project', {
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
+/**
+ * Recurring task template — materializes concrete `task` rows.
+ * Editing the template only affects future generations.
+ */
+export const taskRecurrence = pgTable('task_recurrence', {
+	id: uuid('id').defaultRandom().primaryKey(),
+	projectId: uuid('project_id')
+		.notNull()
+		.references(() => project.id, { onDelete: 'cascade' }),
+	title: varchar('title', { length: 255 }).notNull(),
+	description: text('description'),
+	priority: taskPriorityEnum('priority').notNull(),
+	type: taskTypeEnum('type').notNull(),
+	kind: taskKindEnum('kind').notNull().default('improvement'),
+	ownerId: uuid('owner_id').references(() => user.id, { onDelete: 'set null' }),
+	createdBy: uuid('created_by')
+		.notNull()
+		.references(() => user.id, { onDelete: 'restrict' }),
+	frequency: recurrenceFrequencyEnum('frequency').notNull(),
+	/** Daily: skip Sat/Sun when true. */
+	weekdaysOnly: boolean('weekdays_only').notNull().default(false),
+	/** Weekly: ISO weekdays 1=Mon … 7=Sun. */
+	weekDays: jsonb('week_days').$type<number[]>().notNull().default([]),
+	/** Monthly: day of month 1–31 (clamped to last day of month). */
+	dayOfMonth: integer('day_of_month'),
+	timezone: varchar('timezone', { length: 64 }).notNull().default('America/Sao_Paulo'),
+	enabled: boolean('enabled').notNull().default(true),
+	/** Next due date (YYYY-MM-DD) to materialize. */
+	nextDueDate: date('next_due_date').notNull(),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
 export const task = pgTable('task', {
 	id: uuid('id').defaultRandom().primaryKey(),
 	title: varchar('title', { length: 255 }).notNull(),
@@ -231,6 +270,12 @@ export const task = pgTable('task', {
 	createdBy: uuid('created_by')
 		.notNull()
 		.references(() => user.id, { onDelete: 'restrict' }),
+	/** When set, this task was generated from a recurrence template. */
+	recurrenceId: uuid('recurrence_id').references(() => taskRecurrence.id, {
+		onDelete: 'set null'
+	}),
+	/** Due date slot this occurrence was generated for (dedupe key with recurrenceId). */
+	recurrenceOccurrenceDate: date('recurrence_occurrence_date'),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
@@ -323,6 +368,22 @@ export const groupMemberRelations = relations(groupMember, ({ one }) => ({
 
 export const projectRelations = relations(project, ({ one, many }) => ({
 	group: one(group, { fields: [project.groupId], references: [group.id] }),
+	tasks: many(task),
+	recurrences: many(taskRecurrence)
+}));
+
+export const taskRecurrenceRelations = relations(taskRecurrence, ({ one, many }) => ({
+	project: one(project, { fields: [taskRecurrence.projectId], references: [project.id] }),
+	owner: one(user, {
+		fields: [taskRecurrence.ownerId],
+		references: [user.id],
+		relationName: 'recurrenceOwner'
+	}),
+	creator: one(user, {
+		fields: [taskRecurrence.createdBy],
+		references: [user.id],
+		relationName: 'recurrenceCreator'
+	}),
 	tasks: many(task)
 }));
 
@@ -337,6 +398,10 @@ export const taskRelations = relations(task, ({ one, many }) => ({
 		fields: [task.createdBy],
 		references: [user.id],
 		relationName: 'taskCreator'
+	}),
+	recurrence: one(taskRecurrence, {
+		fields: [task.recurrenceId],
+		references: [taskRecurrence.id]
 	}),
 	files: many(file),
 	executions: many(taskExecution)

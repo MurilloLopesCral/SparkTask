@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/pause-after-hours",
       "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/cron/materialize-recurrences",
+      "schedule": "0 6 * * *"
     }
   ]
 }
