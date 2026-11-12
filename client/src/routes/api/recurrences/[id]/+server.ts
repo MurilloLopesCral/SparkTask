@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import { z } from 'zod';
 import {
+	recurrenceDueOffsetModeEnum,
 	recurrenceFrequencyEnum,
 	taskKindEnum,
 	taskPriorityEnum,
@@ -34,6 +35,8 @@ const patchSchema = z.object({
 		.string()
 		.regex(/^\d{4}-\d{2}-\d{2}$/)
 		.optional(),
+	dueOffsetMode: z.enum(recurrenceDueOffsetModeEnum.enumValues).optional(),
+	dueOffsetDays: z.number().int().min(0).max(90).optional(),
 	enabled: z.boolean().optional()
 });
 

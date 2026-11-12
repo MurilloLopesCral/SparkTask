@@ -3,7 +3,7 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { formatRecurrenceTitleCase } from '$lib/recurrence/constants';
+	import { formatDueOffset, formatRecurrenceTitleCase } from '$lib/recurrence/constants';
 	import type { RecurrenceRow } from '$lib/recurrence/types';
 
 	let {
@@ -19,6 +19,7 @@
 	} = $props();
 
 	const summary = $derived(formatRecurrenceTitleCase(row));
+	const dueSummary = $derived(formatDueOffset(row));
 	const Icon = $derived(
 		row.frequency === 'daily' ? CalendarDays : row.frequency === 'weekly' ? CalendarRange : Calendar
 	);
@@ -46,6 +47,7 @@
 		<Card.Description class="font-serif text-body text-ink">
 			{summary}
 		</Card.Description>
+		<p class="font-serif text-caption text-ink/80">{dueSummary}</p>
 		<p class="truncate font-serif text-caption text-muted-foreground">
 			{row.project?.name ?? 'Projeto'}
 			· próxima {row.nextDueDate}

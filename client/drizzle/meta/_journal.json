@@ -85,6 +85,13 @@
       "when": 1789669200000,
       "tag": "0011_task_recurrence",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1789755600000,
+      "tag": "0012_recurrence_due_offset",
+      "breakpoints": true
     }
   ]
 }

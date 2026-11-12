@@ -1,8 +1,9 @@
 import { and, eq, gte, inArray, lte } from 'drizzle-orm';
 import { db } from './db';
 import { groupMember, project, task } from './db/schema';
+import { addDays, dueOffsetLookbackDays } from '$lib/recurrence/schedule';
 import {
-	ghostDatesForRecurrence,
+	ghostSlotsForRecurrence,
 	listEnabledRecurrencesForProjects,
 	materializeDueRecurrences
 } from './recurrence';
@@ -115,6 +116,15 @@ export async function getCalendarEvents(viewerId: string, query: CalendarQuery) 
 		? recurrences.filter((r) => r.ownerId === query.userId)
 		: recurrences;
 
+	const maxLookback = filteredRecurrences.reduce((max, row) => {
+		const lookback = dueOffsetLookbackDays({
+			mode: row.dueOffsetMode,
+			days: row.dueOffsetDays
+		});
+		return Math.max(max, lookback);
+	}, 0);
+	const occurrenceFrom = maxLookback > 0 ? addDays(query.from, -maxLookback) : query.from;
+
 	const materializedByRecurrence = new Map<string, Set<string>>();
 	for (const t of tasks) {
 		if (!t.recurrenceId || !t.recurrenceOccurrenceDate) continue;
@@ -126,8 +136,7 @@ export async function getCalendarEvents(viewerId: string, query: CalendarQuery) 
 		set.add(t.recurrenceOccurrenceDate);
 	}
 
-	// Also load any materialized occurrences in range that might have different dueDate
-	// (shouldn't happen — occurrence date === dueDate) but cover recurrenceOccurrenceDate.
+	// Occurrences may sit before the visible window when dueDate is offset later.
 	const occurrenceRows = await db
 		.select({
 			recurrenceId: task.recurrenceId,
@@ -137,7 +146,7 @@ export async function getCalendarEvents(viewerId: string, query: CalendarQuery) 
 		.where(
 			and(
 				inArray(task.projectId, projectIds),
-				gte(task.recurrenceOccurrenceDate, query.from),
+				gte(task.recurrenceOccurrenceDate, occurrenceFrom),
 				lte(task.recurrenceOccurrenceDate, query.to)
 			)
 		);
@@ -154,14 +163,14 @@ export async function getCalendarEvents(viewerId: string, query: CalendarQuery) 
 
 	for (const row of filteredRecurrences) {
 		const materialized = materializedByRecurrence.get(row.id) ?? new Set();
-		const ghosts = ghostDatesForRecurrence(row, query.from, query.to, materialized);
-		for (const date of ghosts) {
+		const ghosts = ghostSlotsForRecurrence(row, query.from, query.to, materialized);
+		for (const slot of ghosts) {
 			events.push({
-				id: `ghost:${row.id}:${date}`,
+				id: `ghost:${row.id}:${slot.occurrenceDate}`,
 				kind: 'ghost',
 				title: row.title,
 				description: row.description,
-				date,
+				date: slot.dueDate,
 				priority: row.priority,
 				type: row.type,
 				status: null,

@@ -10,8 +10,10 @@
 		TASK_KIND_META
 	} from '$lib/tasks/constants';
 	import {
+		DUE_OFFSET_MODES,
 		RECURRENCE_FREQUENCIES,
 		WEEKDAY_OPTIONS,
+		type DueOffsetMode,
 		type RecurrenceFrequency
 	} from '$lib/recurrence/constants';
 	import { createRecurrence, updateRecurrence, type RecurrenceFormValues } from '$lib/recurrence/api';
@@ -32,6 +34,8 @@
 		weekDays: number[] | null;
 		dayOfMonth: number | null;
 		nextDueDate: string;
+		dueOffsetMode: DueOffsetMode;
+		dueOffsetDays: number;
 		enabled: boolean;
 	};
 
@@ -66,7 +70,9 @@
 			weekdaysOnly: false,
 			weekDays: [1, 2, 3, 4, 5],
 			dayOfMonth: 1,
-			startFrom
+			startFrom,
+			dueOffsetMode: 'same_day',
+			dueOffsetDays: 3
 		};
 	}
 
@@ -86,12 +92,18 @@
 				weekDays: editing.weekDays?.length ? [...editing.weekDays] : [1],
 				dayOfMonth: editing.dayOfMonth ?? 1,
 				startFrom: editing.nextDueDate,
+				dueOffsetMode: editing.dueOffsetMode ?? 'same_day',
+				dueOffsetDays: editing.dueOffsetDays || 3,
 				enabled: editing.enabled
 			};
 		} else {
 			form = emptyForm(initialStartFrom);
 		}
 	});
+
+	const dueOffsetHint = $derived(
+		DUE_OFFSET_MODES.find((m) => m.value === form.dueOffsetMode)?.hint ?? ''
+	);
 
 	const selectedProject = $derived(projects.find((p) => p.id === form.projectId));
 	const availableOwners = $derived(
@@ -283,6 +295,33 @@
 					<span class="font-sans text-ui-label uppercase">A partir de</span>
 					<input class="text-input" type="date" name="startFrom" bind:value={form.startFrom} />
 				</label>
+
+				<label class="flex flex-col gap-xxs">
+					<span class="font-sans text-ui-label uppercase">Prazo de entrega</span>
+					<select class="text-input" name="dueOffsetMode" bind:value={form.dueOffsetMode}>
+						{#each DUE_OFFSET_MODES as mode (mode.value)}
+							<option value={mode.value}>{mode.label}</option>
+						{/each}
+					</select>
+					<span class="font-serif text-caption text-muted-foreground">{dueOffsetHint}</span>
+				</label>
+
+				{#if form.dueOffsetMode !== 'same_day'}
+					<label class="flex flex-col gap-xxs">
+						<span class="font-sans text-ui-label uppercase">
+							{form.dueOffsetMode === 'after_business_days' ? 'Quantidade de dias úteis' : 'Quantidade de dias'}
+						</span>
+						<input
+							class="text-input"
+							type="number"
+							name="dueOffsetDays"
+							inputmode="numeric"
+							min="1"
+							max="90"
+							bind:value={form.dueOffsetDays}
+						/>
+					</label>
+				{/if}
 			</div>
 
 			<Sheet.Footer>

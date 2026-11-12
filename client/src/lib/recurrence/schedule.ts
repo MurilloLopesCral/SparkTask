@@ -95,3 +95,47 @@ export function expandOccurrences(from: string, to: string, rule: RecurrenceRule
 	}
 	return out;
 }
+
+export type DueOffsetMode = 'same_day' | 'after_days' | 'after_business_days';
+
+export type DueOffsetRule = {
+	mode: DueOffsetMode;
+	days: number;
+};
+
+/** Calendar lookback so due dates in [from,to] include earlier occurrences. */
+export function dueOffsetLookbackDays(rule: DueOffsetRule): number {
+	const days = Math.max(0, Math.min(90, rule.days || 0));
+	if (rule.mode === 'same_day' || days === 0) return 0;
+	// Business days need extra calendar padding for weekends.
+	if (rule.mode === 'after_business_days') return Math.ceil(days * 1.6) + 7;
+	return days;
+}
+
+/** Deadline derived from the occurrence (spawn) date. */
+export function computeDueDate(occurrenceYmd: string, rule: DueOffsetRule): string {
+	const days = Math.max(0, Math.min(90, rule.days || 0));
+	if (rule.mode === 'same_day' || days === 0) return occurrenceYmd;
+
+	if (rule.mode === 'after_days') return addDays(occurrenceYmd, days);
+
+	let cursor = occurrenceYmd;
+	let remaining = days;
+	let guard = 0;
+	while (remaining > 0 && guard < 400) {
+		cursor = addDays(cursor, 1);
+		if (isoWeekdayFromYmd(cursor) <= 5) remaining -= 1;
+		guard += 1;
+	}
+	return cursor;
+}
+
+export function normalizeDueOffset(
+	mode: DueOffsetMode | undefined,
+	days: number | undefined
+): DueOffsetRule {
+	const resolvedMode = mode ?? 'same_day';
+	if (resolvedMode === 'same_day') return { mode: 'same_day', days: 0 };
+	const n = Math.trunc(days ?? 0);
+	return { mode: resolvedMode, days: Math.min(90, Math.max(1, n || 1)) };
+}

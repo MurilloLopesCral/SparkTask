@@ -56,6 +56,13 @@ export const recurrenceFrequencyEnum = pgEnum('recurrence_frequency', [
 	'monthly'
 ]);
 
+/** How task.dueDate is derived from the occurrence (spawn) date. */
+export const recurrenceDueOffsetModeEnum = pgEnum('recurrence_due_offset_mode', [
+	'same_day',
+	'after_days',
+	'after_business_days'
+]);
+
 // ---------------------------------------------------------------------------
 // Auth (better-auth core schema — user/session/account/verification)
 // https://www.better-auth.com/docs/concepts/database#core-schema
@@ -245,8 +252,15 @@ export const taskRecurrence = pgTable('task_recurrence', {
 	dayOfMonth: integer('day_of_month'),
 	timezone: varchar('timezone', { length: 64 }).notNull().default('America/Sao_Paulo'),
 	enabled: boolean('enabled').notNull().default(true),
-	/** Next due date (YYYY-MM-DD) to materialize. */
+	/**
+	 * Next occurrence date (YYYY-MM-DD) to materialize — when the task is spawned.
+	 * Task deadline is derived via dueOffset*.
+	 */
 	nextDueDate: date('next_due_date').notNull(),
+	/** Relative deadline from the occurrence date. */
+	dueOffsetMode: recurrenceDueOffsetModeEnum('due_offset_mode').notNull().default('same_day'),
+	/** Used when mode is after_days / after_business_days (1–90). */
+	dueOffsetDays: integer('due_offset_days').notNull().default(0),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });

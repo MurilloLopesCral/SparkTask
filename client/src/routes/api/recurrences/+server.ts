@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import { z } from 'zod';
 import {
+	recurrenceDueOffsetModeEnum,
 	recurrenceFrequencyEnum,
 	taskKindEnum,
 	taskPriorityEnum,
@@ -31,7 +32,9 @@ const createSchema = z.object({
 	startFrom: z
 		.string()
 		.regex(/^\d{4}-\d{2}-\d{2}$/)
-		.optional()
+		.optional(),
+	dueOffsetMode: z.enum(recurrenceDueOffsetModeEnum.enumValues).optional(),
+	dueOffsetDays: z.number().int().min(0).max(90).optional()
 });
 
 export const GET: RequestHandler = async ({ url, locals }) => {
@@ -79,7 +82,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		weekDays: parsed.data.weekDays,
 		dayOfMonth: parsed.data.dayOfMonth,
 		timezone: parsed.data.timezone,
-		startFrom: parsed.data.startFrom
+		startFrom: parsed.data.startFrom,
+		dueOffsetMode: parsed.data.dueOffsetMode,
+		dueOffsetDays: parsed.data.dueOffsetDays
 	});
 
 	if (!result.ok) {

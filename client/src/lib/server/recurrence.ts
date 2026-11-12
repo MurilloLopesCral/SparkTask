@@ -2,6 +2,7 @@ import { and, desc, eq, inArray, lte } from 'drizzle-orm';
 import { db } from './db';
 import { groupMember, project, task, taskRecurrence } from './db/schema';
 import type {
+	recurrenceDueOffsetModeEnum,
 	recurrenceFrequencyEnum,
 	taskKindEnum,
 	taskPriorityEnum,
@@ -9,14 +10,20 @@ import type {
 } from './db/schema';
 import { userCanAccessProject } from './projects';
 import {
+	addDays,
+	computeDueDate,
+	dueOffsetLookbackDays,
 	expandOccurrences,
 	nextOccurrenceAfter,
 	nextOccurrenceOnOrAfter,
+	normalizeDueOffset,
 	todayInTimeZone,
+	type DueOffsetMode,
 	type RecurrenceRule
 } from '$lib/recurrence/schedule';
 
 export type RecurrenceFrequency = (typeof recurrenceFrequencyEnum.enumValues)[number];
+export type RecurrenceDueOffsetMode = (typeof recurrenceDueOffsetModeEnum.enumValues)[number];
 
 export type CreateRecurrenceInput = {
 	projectId: string;
@@ -32,8 +39,10 @@ export type CreateRecurrenceInput = {
 	weekDays?: number[];
 	dayOfMonth?: number | null;
 	timezone?: string;
-	/** First due date (YYYY-MM-DD). Defaults to next match from today. */
+	/** First occurrence date (YYYY-MM-DD). Defaults to next match from today. */
 	startFrom?: string;
+	dueOffsetMode?: DueOffsetMode;
+	dueOffsetDays?: number;
 };
 
 export type UpdateRecurrenceInput = Partial<
@@ -123,6 +132,7 @@ export async function createRecurrence(input: CreateRecurrenceInput) {
 	};
 	const start = input.startFrom ?? todayInTimeZone(tz);
 	const nextDueDate = nextOccurrenceOnOrAfter(start, rule);
+	const dueOffset = normalizeDueOffset(input.dueOffsetMode, input.dueOffsetDays);
 
 	const [created] = await db
 		.insert(taskRecurrence)
@@ -140,7 +150,9 @@ export async function createRecurrence(input: CreateRecurrenceInput) {
 			weekDays,
 			dayOfMonth: input.frequency === 'monthly' ? input.dayOfMonth : null,
 			timezone: tz,
-			nextDueDate
+			nextDueDate,
+			dueOffsetMode: dueOffset.mode,
+			dueOffsetDays: dueOffset.days
 		})
 		.returning();
 
@@ -171,6 +183,10 @@ export async function updateRecurrence(id: string, input: UpdateRecurrenceInput)
 	const tz = input.timezone ?? current.timezone;
 	const from = input.startFrom ?? todayInTimeZone(tz);
 	const nextDueDate = nextOccurrenceOnOrAfter(from, rule);
+	const dueOffset = normalizeDueOffset(
+		input.dueOffsetMode ?? current.dueOffsetMode,
+		input.dueOffsetDays ?? current.dueOffsetDays
+	);
 
 	const [updated] = await db
 		.update(taskRecurrence)
@@ -189,6 +205,8 @@ export async function updateRecurrence(id: string, input: UpdateRecurrenceInput)
 			timezone: tz,
 			...(input.enabled !== undefined ? { enabled: input.enabled } : {}),
 			nextDueDate,
+			dueOffsetMode: dueOffset.mode,
+			dueOffsetDays: dueOffset.days,
 			updatedAt: new Date()
 		})
 		.where(eq(taskRecurrence.id, id))
@@ -207,12 +225,20 @@ export async function setRecurrenceEnabled(id: string, enabled: boolean) {
 	return { ok: true as const, recurrence: updated };
 }
 
-async function materializeOne(row: typeof taskRecurrence.$inferSelect, dueDate: string) {
+async function materializeOne(row: typeof taskRecurrence.$inferSelect, occurrenceDate: string) {
 	const existing = await db.query.task.findFirst({
-		where: and(eq(task.recurrenceId, row.id), eq(task.recurrenceOccurrenceDate, dueDate)),
+		where: and(
+			eq(task.recurrenceId, row.id),
+			eq(task.recurrenceOccurrenceDate, occurrenceDate)
+		),
 		columns: { id: true }
 	});
 	if (existing) return { created: false };
+
+	const dueDate = computeDueDate(occurrenceDate, {
+		mode: row.dueOffsetMode,
+		days: row.dueOffsetDays
+	});
 
 	await db.insert(task).values({
 		title: row.title,
@@ -226,7 +252,7 @@ async function materializeOne(row: typeof taskRecurrence.$inferSelect, dueDate: 
 		createdBy: row.createdBy,
 		status: 'not_started',
 		recurrenceId: row.id,
-		recurrenceOccurrenceDate: dueDate
+		recurrenceOccurrenceDate: occurrenceDate
 	});
 	return { created: true };
 }
@@ -273,20 +299,32 @@ export async function userCanAccessRecurrence(userId: string, recurrenceId: stri
 	return userCanAccessProject(userId, row.projectId);
 }
 
-export function ghostDatesForRecurrence(
+/** Ghost slots for the calendar — dated by computed deadline, keyed by occurrence. */
+export function ghostSlotsForRecurrence(
 	row: {
 		frequency: RecurrenceFrequency;
 		weekdaysOnly: boolean;
 		weekDays: number[] | null;
 		dayOfMonth: number | null;
 		enabled: boolean;
+		dueOffsetMode: DueOffsetMode;
+		dueOffsetDays: number;
 	},
 	from: string,
 	to: string,
-	materializedDates: Set<string>
-) {
+	materializedOccurrences: Set<string>
+): { occurrenceDate: string; dueDate: string }[] {
 	if (!row.enabled) return [];
-	return expandOccurrences(from, to, toRule(row)).filter((d) => !materializedDates.has(d));
+	const dueRule = { mode: row.dueOffsetMode, days: row.dueOffsetDays };
+	const lookback = dueOffsetLookbackDays(dueRule);
+	const expandFrom = lookback > 0 ? addDays(from, -lookback) : from;
+	return expandOccurrences(expandFrom, to, toRule(row))
+		.filter((occurrenceDate) => !materializedOccurrences.has(occurrenceDate))
+		.map((occurrenceDate) => ({
+			occurrenceDate,
+			dueDate: computeDueDate(occurrenceDate, dueRule)
+		}))
+		.filter((slot) => slot.dueDate >= from && slot.dueDate <= to);
 }
 
 export async function listEnabledRecurrencesForProjects(projectIds: string[]) {

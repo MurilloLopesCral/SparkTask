@@ -1,4 +1,4 @@
-import type { RecurrenceFrequency } from './constants';
+import type { DueOffsetMode, RecurrenceFrequency } from './constants';
 
 export type RecurrenceRow = {
 	id: string;
@@ -14,6 +14,8 @@ export type RecurrenceRow = {
 	weekDays: number[] | null;
 	dayOfMonth: number | null;
 	nextDueDate: string;
+	dueOffsetMode: DueOffsetMode;
+	dueOffsetDays: number;
 	enabled: boolean;
 	project?: { id: string; name: string; groupId: string } | null;
 	owner?: { id: string; name: string | null; email: string } | null;

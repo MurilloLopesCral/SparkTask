@@ -1,6 +1,6 @@
 import { invalidateAll } from '$app/navigation';
 import { toast } from 'svelte-sonner';
-import type { RecurrenceFrequency } from './constants';
+import type { DueOffsetMode, RecurrenceFrequency } from './constants';
 
 export type RecurrenceFormValues = {
 	projectId: string;
@@ -15,27 +15,35 @@ export type RecurrenceFormValues = {
 	weekDays: number[];
 	dayOfMonth: number;
 	startFrom: string;
+	dueOffsetMode: DueOffsetMode;
+	dueOffsetDays: number;
 	enabled?: boolean;
 };
+
+function payloadFromForm(values: RecurrenceFormValues) {
+	return {
+		projectId: values.projectId,
+		title: values.title,
+		description: values.description || null,
+		priority: values.priority,
+		type: values.type,
+		kind: values.kind,
+		ownerId: values.ownerId || null,
+		frequency: values.frequency,
+		weekdaysOnly: values.weekdaysOnly,
+		weekDays: values.weekDays,
+		dayOfMonth: values.frequency === 'monthly' ? values.dayOfMonth : null,
+		startFrom: values.startFrom || undefined,
+		dueOffsetMode: values.dueOffsetMode,
+		dueOffsetDays: values.dueOffsetMode === 'same_day' ? 0 : values.dueOffsetDays
+	};
+}
 
 export async function createRecurrence(values: RecurrenceFormValues) {
 	const res = await fetch('/api/recurrences', {
 		method: 'POST',
 		headers: { 'content-type': 'application/json' },
-		body: JSON.stringify({
-			projectId: values.projectId,
-			title: values.title,
-			description: values.description || null,
-			priority: values.priority,
-			type: values.type,
-			kind: values.kind,
-			ownerId: values.ownerId || null,
-			frequency: values.frequency,
-			weekdaysOnly: values.weekdaysOnly,
-			weekDays: values.weekDays,
-			dayOfMonth: values.frequency === 'monthly' ? values.dayOfMonth : null,
-			startFrom: values.startFrom || undefined
-		})
+		body: JSON.stringify(payloadFromForm(values))
 	});
 	await invalidateAll();
 	const data = await res.json().catch(() => ({}));
@@ -52,18 +60,7 @@ export async function updateRecurrence(id: string, values: RecurrenceFormValues)
 		method: 'PATCH',
 		headers: { 'content-type': 'application/json' },
 		body: JSON.stringify({
-			projectId: values.projectId,
-			title: values.title,
-			description: values.description || null,
-			priority: values.priority,
-			type: values.type,
-			kind: values.kind,
-			ownerId: values.ownerId || null,
-			frequency: values.frequency,
-			weekdaysOnly: values.weekdaysOnly,
-			weekDays: values.weekDays,
-			dayOfMonth: values.frequency === 'monthly' ? values.dayOfMonth : null,
-			startFrom: values.startFrom || undefined,
+			...payloadFromForm(values),
 			enabled: values.enabled
 		})
 	});

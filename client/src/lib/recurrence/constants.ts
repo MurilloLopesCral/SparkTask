@@ -1,9 +1,28 @@
 export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly';
+export type DueOffsetMode = 'same_day' | 'after_days' | 'after_business_days';
 
 export const RECURRENCE_FREQUENCIES: { value: RecurrenceFrequency; label: string }[] = [
 	{ value: 'daily', label: 'Diária' },
 	{ value: 'weekly', label: 'Semanal' },
 	{ value: 'monthly', label: 'Mensal' }
+];
+
+export const DUE_OFFSET_MODES: { value: DueOffsetMode; label: string; hint: string }[] = [
+	{
+		value: 'same_day',
+		label: 'Mesmo dia da criação',
+		hint: 'O prazo é a data em que a tarefa é gerada.'
+	},
+	{
+		value: 'after_days',
+		label: 'Dias após a criação',
+		hint: 'Conta dias corridos a partir da ocorrência.'
+	},
+	{
+		value: 'after_business_days',
+		label: 'Dias úteis após a criação',
+		hint: 'Ignora sábados e domingos.'
+	}
 ];
 
 export const WEEKDAY_OPTIONS: {
@@ -54,4 +73,17 @@ export function formatRecurrenceRule(row: {
 
 export function formatRecurrenceTitleCase(row: Parameters<typeof formatRecurrenceRule>[0]) {
 	return capitalize(formatRecurrenceRule(row));
+}
+
+export function formatDueOffset(row: {
+	dueOffsetMode?: DueOffsetMode | null;
+	dueOffsetDays?: number | null;
+}): string {
+	const mode = row.dueOffsetMode ?? 'same_day';
+	const days = row.dueOffsetDays ?? 0;
+	if (mode === 'same_day' || days <= 0) return 'Prazo no mesmo dia';
+	if (mode === 'after_business_days') {
+		return days === 1 ? 'Prazo em 1 dia útil' : `Prazo em ${days} dias úteis`;
+	}
+	return days === 1 ? 'Prazo em 1 dia' : `Prazo em ${days} dias`;
 }
