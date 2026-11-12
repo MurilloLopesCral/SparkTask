@@ -1,3 +1,4 @@
+import { redirect } from '@sveltejs/kit';
 import { getUserGroups } from '$lib/server/me';
 import { listRecurrencesForUser } from '$lib/server/recurrence';
 import { getVisibleGroupMembers, getVisibleProjects } from '$lib/server/tasks';
@@ -8,6 +9,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const groups = await getUserGroups(userId);
 	const requestedGroup = url.searchParams.get('group');
 	const selectedGroup = groups.find((g) => g.id === requestedGroup) ?? groups[0] ?? null;
+
+	// Always land with an explicit group in the URL (first membership by default).
+	if (selectedGroup && requestedGroup !== selectedGroup.id) {
+		const next = new URL(url);
+		next.searchParams.set('group', selectedGroup.id);
+		redirect(303, `${next.pathname}${next.search}`);
+	}
 
 	const [projects, groupMembers, recurrences] = await Promise.all([
 		getVisibleProjects(userId),

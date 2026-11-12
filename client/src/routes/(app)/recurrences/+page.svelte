@@ -32,13 +32,13 @@
 			</p>
 		</div>
 
-		{#if data.groups.length > 0}
-			<label class="flex max-w-sm flex-col gap-xxs">
+		{#if data.groups.length > 0 && data.selectedGroupId}
+			<label class="flex w-full min-w-[12rem] max-w-sm flex-col gap-xxs">
 				<span class="font-sans text-ui-label uppercase">Grupo</span>
 				<select
-					class="text-input"
+					class="text-input min-h-11"
 					name="group"
-					value={data.selectedGroupId ?? ''}
+					value={data.selectedGroupId}
 					onchange={(e) => setGroup(e.currentTarget.value)}
 				>
 					{#each data.groups as group (group.id)}
