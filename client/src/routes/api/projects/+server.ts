@@ -1,13 +1,16 @@
 import { error, json } from '@sveltejs/kit';
 import { z } from 'zod';
+import { projectLifecycleSchema } from '$lib/projects/schemas';
 import { createProject, getVisibleProjects, userCanAccessGroup } from '$lib/server/projects';
 import type { RequestHandler } from './$types';
 
-const createProjectSchema = z.object({
-	name: z.string().min(1).max(255),
-	description: z.string().optional(),
-	groupId: z.string().uuid()
-});
+const createProjectSchema = z
+	.object({
+		name: z.string().min(1).max(255),
+		description: z.string().optional(),
+		groupId: z.string().uuid()
+	})
+	.merge(projectLifecycleSchema);
 
 export const GET: RequestHandler = async ({ locals }) => {
 	if (!locals.user) error(401, 'Não autenticado.');
@@ -28,11 +31,46 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json({ message: 'Você não tem acesso a este grupo.' }, { status: 403 });
 	}
 
-	const created = await createProject({
-		name: parsed.data.name,
-		description: parsed.data.description || null,
-		groupId: parsed.data.groupId
-	});
+	const {
+		name,
+		description,
+		groupId,
+		plexusProjectId,
+		implementationStart,
+		implementationEnd,
+		assistedOpsStart,
+		assistedOpsEnd,
+		performanceStart,
+		performanceEnd
+	} = parsed.data;
 
-	return json({ project: created }, { status: 201 });
+	try {
+		const created = await createProject({
+			name,
+			description: description || null,
+			groupId,
+			plexusProjectId,
+			implementationStart,
+			implementationEnd,
+			assistedOpsStart,
+			assistedOpsEnd,
+			performanceStart,
+			performanceEnd
+		});
+		return json({ project: created }, { status: 201 });
+	} catch (err) {
+		if (isUniqueViolation(err)) {
+			return json({ message: 'Este ID Plexus já está em uso.' }, { status: 409 });
+		}
+		throw err;
+	}
 };
+
+function isUniqueViolation(err: unknown) {
+	return (
+		typeof err === 'object' &&
+		err !== null &&
+		'code' in err &&
+		(err as { code?: string }).code === '23505'
+	);
+}

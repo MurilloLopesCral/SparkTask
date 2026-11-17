@@ -46,7 +46,17 @@ export async function userCanAccessProject(userId: string, projectId: string) {
 	return rows.length > 0;
 }
 
-export interface CreateProjectInput {
+export type ProjectLifecycleFields = {
+	plexusProjectId?: string | null;
+	implementationStart?: string | null;
+	implementationEnd?: string | null;
+	assistedOpsStart?: string | null;
+	assistedOpsEnd?: string | null;
+	performanceStart?: string | null;
+	performanceEnd?: string | null;
+};
+
+export interface CreateProjectInput extends ProjectLifecycleFields {
 	name: string;
 	description: string | null;
 	groupId: string;
@@ -57,7 +67,7 @@ export async function createProject(input: CreateProjectInput) {
 	return created;
 }
 
-export interface ProjectUpdateFields {
+export interface ProjectUpdateFields extends ProjectLifecycleFields {
 	name?: string;
 	description?: string | null;
 	image?: string | null;
@@ -76,4 +86,44 @@ export async function setProjectImage(projectId: string, image: string | null) {
 
 export async function deleteProjectById(projectId: string) {
 	await db.delete(project).where(eq(project.id, projectId));
+}
+
+const roadmapColumns = {
+	id: true,
+	name: true,
+	groupId: true,
+	plexusProjectId: true,
+	implementationStart: true,
+	implementationEnd: true,
+	assistedOpsStart: true,
+	assistedOpsEnd: true,
+	performanceStart: true,
+	performanceEnd: true
+} as const;
+
+export async function getProjectsForGroup(userId: string, groupId: string) {
+	if (!(await userCanAccessGroup(userId, groupId))) return null;
+
+	return db.query.project.findMany({
+		where: and(eq(project.groupId, groupId), eq(project.isActive, true)),
+		orderBy: (p, { asc }) => [asc(p.name)],
+		columns: roadmapColumns
+	});
+}
+
+/** Active projects with lifecycle dates — portfolio Gantt feed. */
+export async function getRoadmapProjects(userId: string) {
+	const memberships = await db
+		.select({ groupId: groupMember.groupId })
+		.from(groupMember)
+		.where(eq(groupMember.memberId, userId));
+
+	const groupIds = memberships.map((m) => m.groupId);
+	if (groupIds.length === 0) return [];
+
+	return db.query.project.findMany({
+		where: and(inArray(project.groupId, groupIds), eq(project.isActive, true)),
+		orderBy: (p, { asc }) => [asc(p.name)],
+		columns: roadmapColumns
+	});
 }

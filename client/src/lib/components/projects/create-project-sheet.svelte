@@ -5,7 +5,9 @@
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import { Add01Icon } from '@hugeicons/core-free-icons';
 	import { createProject, uploadProjectImage } from '$lib/projects/api';
+	import { emptyLifecycleForm } from '$lib/projects/lifecycle';
 	import ProjectImageField from './project-image-field.svelte';
+	import ProjectLifecycleFields from './project-lifecycle-fields.svelte';
 
 	let { groups }: { groups: { id: string; name: string }[] } = $props();
 
@@ -20,7 +22,8 @@
 		return {
 			name: '',
 			description: '',
-			groupId: groups[0]?.id ?? ''
+			groupId: groups[0]?.id ?? '',
+			...emptyLifecycleForm()
 		};
 	}
 
@@ -69,7 +72,7 @@
 			</Button>
 		{/snippet}
 	</Sheet.Trigger>
-	<Sheet.Content class="flex w-full flex-col overscroll-contain sm:max-w-[24rem]">
+	<Sheet.Content class="flex w-full flex-col overscroll-contain sm:max-w-[26rem]">
 		<form onsubmit={handleSubmit} class="flex h-full flex-col">
 			<Sheet.Header>
 				<Sheet.Title>Novo projeto</Sheet.Title>
@@ -119,6 +122,8 @@
 						</Select.Content>
 					</Select.Root>
 				</label>
+
+				<ProjectLifecycleFields bind:form />
 			</div>
 
 			<Sheet.Footer>

@@ -7,8 +7,10 @@
 		updateProject,
 		uploadProjectImage
 	} from '$lib/projects/api';
+	import { lifecycleFromProject } from '$lib/projects/lifecycle';
 	import type { VisibleProject } from '$lib/server/projects';
 	import ProjectImageField from './project-image-field.svelte';
+	import ProjectLifecycleFields from './project-lifecycle-fields.svelte';
 
 	let { project, open = $bindable(false) }: { project: VisibleProject; open?: boolean } = $props();
 
@@ -20,7 +22,11 @@
 	let wasOpen = false;
 
 	function toFormState(p: VisibleProject) {
-		return { name: p.name, description: p.description ?? '' };
+		return {
+			name: p.name,
+			description: p.description ?? '',
+			...lifecycleFromProject(p)
+		};
 	}
 
 	// Seed only when the sheet opens — not when `project` refreshes mid-save
@@ -44,7 +50,6 @@
 
 		submitting = true;
 		try {
-			// Image first, while we still hold the File snapshot.
 			if (fileToUpload) {
 				const uploaded = await uploadProjectImage(project.id, fileToUpload, { quiet: true });
 				if (!uploaded) return;
@@ -64,7 +69,7 @@
 </script>
 
 <Sheet.Root bind:open>
-	<Sheet.Content class="flex w-full flex-col overscroll-contain sm:max-w-[24rem]">
+	<Sheet.Content class="flex w-full flex-col overscroll-contain sm:max-w-[26rem]">
 		<form onsubmit={handleSubmit} class="flex h-full flex-col">
 			<Sheet.Header>
 				<Sheet.Title>Editar projeto</Sheet.Title>
@@ -100,6 +105,8 @@
 						bind:value={form.description}
 					></textarea>
 				</label>
+
+				<ProjectLifecycleFields bind:form />
 			</div>
 
 			<Sheet.Footer>

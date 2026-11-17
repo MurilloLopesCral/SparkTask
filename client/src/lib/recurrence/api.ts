@@ -89,3 +89,15 @@ export async function setRecurrenceEnabled(id: string, enabled: boolean) {
 	toast.success(enabled ? 'Recorrência retomada.' : 'Recorrência pausada.');
 	return true;
 }
+
+export async function removeRecurrence(id: string) {
+	const res = await fetch(`/api/recurrences/${id}`, { method: 'DELETE' });
+	await invalidateAll();
+	const data = await res.json().catch(() => ({}));
+	if (!res.ok) {
+		toast.error(data.message ?? 'Não foi possível excluir a recorrência.');
+		return false;
+	}
+	toast.success('Recorrência excluída. Tarefas já geradas foram mantidas.');
+	return true;
+}

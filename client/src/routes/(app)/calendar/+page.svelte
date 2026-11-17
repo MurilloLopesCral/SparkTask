@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import * as Tabs from '$lib/components/ui/tabs/index.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
 	import {
 		ArrowLeft01Icon,
@@ -15,6 +16,7 @@
 	import MonthGrid from '$lib/components/calendar/month-grid.svelte';
 	import WeekGrid from '$lib/components/calendar/week-grid.svelte';
 	import ListView from '$lib/components/calendar/list-view.svelte';
+	import ProjectRoadmapGantt from '$lib/components/calendar/project-roadmap-gantt.svelte';
 	import EventDetailDialog from '$lib/components/calendar/event-detail-dialog.svelte';
 	import CreateTaskSheet from '$lib/components/tasks/create-task-sheet.svelte';
 	import RecurrenceSheet from '$lib/components/recurrence/recurrence-sheet.svelte';
@@ -40,8 +42,12 @@
 
 	const anchor = $derived(parseYmd(data.anchorDate));
 	const view = $derived(data.view as CalendarViewMode);
+	const tab = $derived(data.tab);
+	const isProjects = $derived(tab === 'projects');
+	const anchorYear = $derived(anchor.getFullYear());
 
 	const periodLabel = $derived.by(() => {
+		if (isProjects) return String(anchorYear);
 		if (view === 'week') {
 			const start = startOfWeek(anchor);
 			const end = addDays(start, 6);
@@ -63,12 +69,17 @@
 		});
 	}
 
+	function setTab(next: string) {
+		updateUrl({
+			tab: next === 'projects' ? 'projects' : undefined
+		});
+	}
+
 	function setView(next: CalendarViewMode) {
 		updateUrl({ view: next === 'month' ? undefined : next });
 	}
 
 	function setGroup(groupId: string) {
-		// Changing group clears a project that may not exist in the new group.
 		updateUrl({ group: groupId, project: undefined });
 	}
 
@@ -84,6 +95,12 @@
 	}
 
 	function shiftPeriod(delta: number) {
+		if (isProjects) {
+			const next = new Date(anchor);
+			next.setFullYear(next.getFullYear() + delta);
+			updateUrl({ date: toYmd(next) });
+			return;
+		}
 		const next = view === 'week' ? addDays(anchor, delta * 7) : addMonths(anchor, delta);
 		updateUrl({ date: toYmd(next) });
 	}
@@ -110,6 +127,12 @@
 			refreshing = false;
 		}
 	}
+
+	const projectOptions = $derived(
+		isProjects
+			? data.roadmapProjects.map((p) => ({ id: p.id, name: p.name }))
+			: data.projects
+	);
 </script>
 
 <svelte:head><title>Calendário — SparkTask</title></svelte:head>
@@ -123,19 +146,26 @@
 				<p class="section-eyebrow section-eyebrow--olive">Agenda</p>
 				<h1 class="font-display text-h1 uppercase text-pretty">Calendário</h1>
 				<p class="mt-xs max-w-prose font-serif text-body text-muted-foreground">
-					Prazos do grupo e previsões de recorrência. Clique com o botão direito em um dia para
-					criar tarefa ou recorrência.
+					{#if isProjects}
+						Roadmap mensal dos projetos: implementação, QO e QP. Edite as datas no cadastro do
+						projeto.
+					{:else}
+						Prazos do grupo e previsões de recorrência. Clique com o botão direito em um dia para
+						criar tarefa ou recorrência.
+					{/if}
 				</p>
 			</div>
 			<div class="flex flex-wrap gap-xs">
-				<Button
-					type="button"
-					variant="secondary"
-					href={resolve('/recurrences')}
-					class="min-h-11 touch-manipulation"
-				>
-					Gerenciar recorrências
-				</Button>
+				{#if !isProjects}
+					<Button
+						type="button"
+						variant="secondary"
+						href={resolve('/recurrences')}
+						class="min-h-11 touch-manipulation"
+					>
+						Gerenciar recorrências
+					</Button>
+				{/if}
 				<Button
 					type="button"
 					variant="secondary"
@@ -153,6 +183,13 @@
 				</Button>
 			</div>
 		</div>
+
+		<Tabs.Root value={tab} onValueChange={setTab}>
+			<Tabs.List>
+				<Tabs.Trigger value="tasks">Tarefas</Tabs.Trigger>
+				<Tabs.Trigger value="projects">Projetos</Tabs.Trigger>
+			</Tabs.List>
+		</Tabs.Root>
 
 		<div class="flex flex-col gap-sm border border-frame bg-canvas p-md">
 			<div class="flex flex-wrap items-center gap-sm">
@@ -181,76 +218,78 @@
 						onchange={(e) => setProject(e.currentTarget.value)}
 					>
 						<option value="all">Todos os projetos</option>
-						{#each data.projects as project (project.id)}
+						{#each projectOptions as project (project.id)}
 							<option value={project.id}>{project.name}</option>
 						{/each}
 					</select>
 				</label>
 
-				<div class="flex flex-col gap-xxs">
-					<span class="font-sans text-ui-label uppercase">Escopo</span>
-					<div class="flex border border-frame" role="group" aria-label="Escopo do calendário">
-						<Button
-							type="button"
-							variant={data.scope === 'mine' ? 'default' : 'secondary'}
-							size="sm"
-							class="min-h-11 rounded-none border-0 touch-manipulation"
-							aria-pressed={data.scope === 'mine'}
-							onclick={() => setScope('mine')}
-						>
-							Meu calendário
-						</Button>
-						<Button
-							type="button"
-							variant={data.scope === 'group' ? 'default' : 'secondary'}
-							size="sm"
-							class="min-h-11 rounded-none border-0 border-l border-frame touch-manipulation"
-							aria-pressed={data.scope === 'group'}
-							onclick={() => setScope('group')}
-						>
-							Calendário do grupo
-						</Button>
+				{#if !isProjects}
+					<div class="flex flex-col gap-xxs">
+						<span class="font-sans text-ui-label uppercase">Escopo</span>
+						<div class="flex border border-frame" role="group" aria-label="Escopo do calendário">
+							<Button
+								type="button"
+								variant={data.scope === 'mine' ? 'default' : 'secondary'}
+								size="sm"
+								class="min-h-11 rounded-none border-0 touch-manipulation"
+								aria-pressed={data.scope === 'mine'}
+								onclick={() => setScope('mine')}
+							>
+								Meu calendário
+							</Button>
+							<Button
+								type="button"
+								variant={data.scope === 'group' ? 'default' : 'secondary'}
+								size="sm"
+								class="min-h-11 rounded-none border-0 border-l border-frame touch-manipulation"
+								aria-pressed={data.scope === 'group'}
+								onclick={() => setScope('group')}
+							>
+								Calendário do grupo
+							</Button>
+						</div>
 					</div>
-				</div>
 
-				<div class="flex flex-col gap-xxs">
-					<span class="font-sans text-ui-label uppercase">Visão</span>
-					<div class="flex border border-frame" role="group" aria-label="Modo de visualização">
-						<Button
-							type="button"
-							variant={view === 'month' ? 'default' : 'secondary'}
-							size="sm"
-							class="rounded-none border-0"
-							aria-pressed={view === 'month'}
-							onclick={() => setView('month')}
-						>
-							<HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} class="size-4" />
-							<span class="hidden sm:inline">Mês</span>
-						</Button>
-						<Button
-							type="button"
-							variant={view === 'week' ? 'default' : 'secondary'}
-							size="sm"
-							class="rounded-none border-0 border-l border-frame"
-							aria-pressed={view === 'week'}
-							onclick={() => setView('week')}
-						>
-							<HugeiconsIcon icon={GridIcon} strokeWidth={2} class="size-4" />
-							<span class="hidden sm:inline">Semana</span>
-						</Button>
-						<Button
-							type="button"
-							variant={view === 'list' ? 'default' : 'secondary'}
-							size="sm"
-							class="rounded-none border-0 border-l border-frame"
-							aria-pressed={view === 'list'}
-							onclick={() => setView('list')}
-						>
-							<HugeiconsIcon icon={Menu01Icon} strokeWidth={2} class="size-4" />
-							<span class="hidden sm:inline">Lista</span>
-						</Button>
+					<div class="flex flex-col gap-xxs">
+						<span class="font-sans text-ui-label uppercase">Visão</span>
+						<div class="flex border border-frame" role="group" aria-label="Modo de visualização">
+							<Button
+								type="button"
+								variant={view === 'month' ? 'default' : 'secondary'}
+								size="sm"
+								class="rounded-none border-0"
+								aria-pressed={view === 'month'}
+								onclick={() => setView('month')}
+							>
+								<HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} class="size-4" />
+								<span class="hidden sm:inline">Mês</span>
+							</Button>
+							<Button
+								type="button"
+								variant={view === 'week' ? 'default' : 'secondary'}
+								size="sm"
+								class="rounded-none border-0 border-l border-frame"
+								aria-pressed={view === 'week'}
+								onclick={() => setView('week')}
+							>
+								<HugeiconsIcon icon={GridIcon} strokeWidth={2} class="size-4" />
+								<span class="hidden sm:inline">Semana</span>
+							</Button>
+							<Button
+								type="button"
+								variant={view === 'list' ? 'default' : 'secondary'}
+								size="sm"
+								class="rounded-none border-0 border-l border-frame"
+								aria-pressed={view === 'list'}
+								onclick={() => setView('list')}
+							>
+								<HugeiconsIcon icon={Menu01Icon} strokeWidth={2} class="size-4" />
+								<span class="hidden sm:inline">Lista</span>
+							</Button>
+						</div>
 					</div>
-				</div>
+				{/if}
 			</div>
 
 			<div class="flex flex-wrap items-center justify-between gap-sm">
@@ -260,7 +299,7 @@
 						variant="secondary"
 						size="icon"
 						class="size-11 touch-manipulation"
-						aria-label="Período anterior"
+						aria-label={isProjects ? 'Ano anterior' : 'Período anterior'}
 						onclick={() => shiftPeriod(-1)}
 					>
 						<HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
@@ -270,12 +309,14 @@
 						variant="secondary"
 						size="icon"
 						class="size-11 touch-manipulation"
-						aria-label="Próximo período"
+						aria-label={isProjects ? 'Próximo ano' : 'Próximo período'}
 						onclick={() => shiftPeriod(1)}
 					>
 						<HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />
 					</Button>
-					<Button type="button" variant="secondary" onclick={goToday}>Hoje</Button>
+					<Button type="button" variant="secondary" onclick={goToday}>
+						{isProjects ? 'Este ano' : 'Hoje'}
+					</Button>
 				</div>
 				<p class="font-sans text-h3 uppercase tabular-nums text-pretty" aria-live="polite">
 					{periodLabel}
@@ -290,6 +331,12 @@
 				Você precisa participar de um grupo para ver o calendário.
 			</p>
 		</div>
+	{:else if isProjects}
+		<ProjectRoadmapGantt
+			projects={data.roadmapProjects}
+			{anchorYear}
+			selectedProjectId={data.selectedProjectId}
+		/>
 	{:else if view === 'month'}
 		<MonthGrid
 			{anchor}
@@ -310,31 +357,35 @@
 		<ListView events={data.events} onSelect={(e) => (selectedEvent = e)} />
 	{/if}
 
-	<div class="flex flex-wrap items-center gap-md font-serif text-caption text-muted-foreground">
-		<span class="inline-flex items-center gap-1">
-			<span class="size-2 bg-tint-sky" aria-hidden="true"></span> Tarefa com prazo
-		</span>
-		<span class="inline-flex items-center gap-1">
-			<span class="size-2 border border-dashed border-frame/50 bg-muted" aria-hidden="true"></span>
-			Ocorrência prevista (recorrência)
-		</span>
-	</div>
+	{#if !isProjects}
+		<div class="flex flex-wrap items-center gap-md font-serif text-caption text-muted-foreground">
+			<span class="inline-flex items-center gap-1">
+				<span class="size-2 bg-tint-sky" aria-hidden="true"></span> Tarefa com prazo
+			</span>
+			<span class="inline-flex items-center gap-1">
+				<span class="size-2 border border-dashed border-frame/50 bg-muted" aria-hidden="true"></span>
+				Ocorrência prevista (recorrência)
+			</span>
+		</div>
+	{/if}
 </div>
 
-<EventDetailDialog bind:event={selectedEvent} />
+{#if !isProjects}
+	<EventDetailDialog bind:event={selectedEvent} />
 
-{#if data.projects.length > 0}
-	<CreateTaskSheet
-		projects={data.projects}
-		groupMembers={data.groupMembers}
-		showTrigger={false}
-		initialDueDate={taskDueDate}
-		bind:open={taskSheetOpen}
-	/>
-	<RecurrenceSheet
-		projects={data.projects}
-		groupMembers={data.groupMembers}
-		initialStartFrom={recurrenceStartFrom}
-		bind:open={recurrenceSheetOpen}
-	/>
+	{#if data.projects.length > 0}
+		<CreateTaskSheet
+			projects={data.projects}
+			groupMembers={data.groupMembers}
+			showTrigger={false}
+			initialDueDate={taskDueDate}
+			bind:open={taskSheetOpen}
+		/>
+		<RecurrenceSheet
+			projects={data.projects}
+			groupMembers={data.groupMembers}
+			initialStartFrom={recurrenceStartFrom}
+			bind:open={recurrenceSheetOpen}
+		/>
+	{/if}
 {/if}

@@ -1,5 +1,6 @@
 import { getCalendarEvents } from '$lib/server/calendar';
 import { getUserGroups } from '$lib/server/me';
+import { getRoadmapProjects } from '$lib/server/projects';
 import { materializeDueRecurrences } from '$lib/server/recurrence';
 import { getVisibleGroupMembers, getVisibleProjects } from '$lib/server/tasks';
 import { rangeForView, toYmd } from '$lib/calendar/dates';
@@ -14,6 +15,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const groups = await getUserGroups(userId);
 	const requestedGroup = url.searchParams.get('group');
 	const selectedGroup = groups.find((g) => g.id === requestedGroup) ?? groups[0] ?? null;
+
+	const tabParam = url.searchParams.get('tab');
+	const tab = tabParam === 'projects' ? ('projects' as const) : ('tasks' as const);
 
 	const viewParam = url.searchParams.get('view');
 	const view =
@@ -36,28 +40,35 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	const { from, to } = rangeForView(view, anchor);
 
-	const [projects, groupMembers] = await Promise.all([
+	const [projects, roadmapProjects, groupMembers] = await Promise.all([
 		getVisibleProjects(userId),
+		getRoadmapProjects(userId),
 		getVisibleGroupMembers(userId)
 	]);
 
 	const scopedProjects = selectedGroup
 		? projects.filter((p) => p.groupId === selectedGroup.id)
 		: projects;
+	const scopedRoadmap = selectedGroup
+		? roadmapProjects.filter((p) => p.groupId === selectedGroup.id)
+		: roadmapProjects;
 	const selectedProjectId =
-		requestedProject && scopedProjects.some((p) => p.id === requestedProject)
+		requestedProject &&
+		(scopedProjects.some((p) => p.id === requestedProject) ||
+			scopedRoadmap.some((p) => p.id === requestedProject))
 			? requestedProject
 			: undefined;
 
-	const calendarResult = selectedGroup
-		? await getCalendarEvents(userId, {
-				groupId: selectedGroup.id,
-				from,
-				to,
-				userId: mineOnly ? userId : undefined,
-				projectId: selectedProjectId
-			})
-		: { ok: true as const, events: [] };
+	const calendarResult =
+		selectedGroup && tab === 'tasks'
+			? await getCalendarEvents(userId, {
+					groupId: selectedGroup.id,
+					from,
+					to,
+					userId: mineOnly ? userId : undefined,
+					projectId: selectedProjectId
+				})
+			: { ok: true as const, events: [] };
 
 	const events = calendarResult.ok ? calendarResult.events : [];
 	const scopedMembers = selectedGroup
@@ -68,6 +79,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		groups,
 		selectedGroupId: selectedGroup?.id ?? null,
 		selectedProjectId: selectedProjectId ?? null,
+		tab,
 		view,
 		anchorDate: toYmd(anchor),
 		scope: mineOnly ? ('mine' as const) : ('group' as const),
@@ -75,6 +87,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		to,
 		events,
 		projects: scopedProjects,
+		roadmapProjects: scopedRoadmap,
 		groupMembers: scopedMembers,
 		currentUserId: userId
 	};

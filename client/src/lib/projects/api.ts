@@ -1,7 +1,8 @@
 ﻿import { invalidateAll } from '$app/navigation';
 import { toast } from 'svelte-sonner';
+import { lifecyclePayload, type ProjectLifecycleForm } from './lifecycle';
 
-export interface CreateProjectValues {
+export interface CreateProjectValues extends ProjectLifecycleForm {
 	name: string;
 	description: string;
 	groupId: string;
@@ -14,7 +15,8 @@ export async function createProject(values: CreateProjectValues) {
 		body: JSON.stringify({
 			name: values.name,
 			description: values.description || undefined,
-			groupId: values.groupId
+			groupId: values.groupId,
+			...lifecyclePayload(values)
 		})
 	});
 	const data = await res.json().catch(() => ({}));
@@ -32,7 +34,7 @@ export async function createProject(values: CreateProjectValues) {
 	};
 }
 
-export interface ProjectFormValues {
+export interface ProjectFormValues extends ProjectLifecycleForm {
 	name: string;
 	description: string;
 }
@@ -41,12 +43,17 @@ export async function updateProject(projectId: string, values: ProjectFormValues
 	const res = await fetch(`/api/projects/${projectId}`, {
 		method: 'PATCH',
 		headers: { 'content-type': 'application/json' },
-		body: JSON.stringify({ name: values.name, description: values.description || null })
+		body: JSON.stringify({
+			name: values.name,
+			description: values.description || null,
+			...lifecyclePayload(values)
+		})
 	});
 	await invalidateAll();
+	const data = await res.json().catch(() => ({}));
 
 	if (!res.ok) {
-		toast.error('Não foi possível salvar o projeto.');
+		toast.error(data.message ?? 'Não foi possível salvar o projeto.');
 		return false;
 	}
 	toast.success('Projeto atualizado.');

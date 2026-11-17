@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CalendarDays, CalendarRange, Calendar, Pause, Play, Pencil } from '@lucide/svelte';
+	import { CalendarDays, CalendarRange, Calendar, Pause, Play, Pencil, Trash2 } from '@lucide/svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -9,13 +9,17 @@
 	let {
 		row,
 		toggling = false,
+		deleting = false,
 		onEdit,
-		onToggle
+		onToggle,
+		onDelete
 	}: {
 		row: RecurrenceRow;
 		toggling?: boolean;
+		deleting?: boolean;
 		onEdit: (row: RecurrenceRow) => void;
 		onToggle: (row: RecurrenceRow) => void;
+		onDelete: (row: RecurrenceRow) => void;
 	} = $props();
 
 	const summary = $derived(formatRecurrenceTitleCase(row));
@@ -69,7 +73,7 @@
 			variant="secondary"
 			size="sm"
 			class="min-h-10 flex-1 touch-manipulation rounded-none"
-			disabled={toggling}
+			disabled={toggling || deleting}
 			onclick={() => onToggle(row)}
 			aria-label={row.enabled ? 'Pausar recorrência' : 'Retomar recorrência'}
 		>
@@ -80,6 +84,18 @@
 				<Play class="size-3.5" aria-hidden="true" />
 				{toggling ? '…' : 'Retomar'}
 			{/if}
+		</Button>
+		<Button
+			type="button"
+			variant="secondary"
+			size="sm"
+			class="min-h-10 touch-manipulation rounded-none text-destructive hover:bg-destructive/10"
+			disabled={deleting || toggling}
+			onclick={() => onDelete(row)}
+			aria-label="Excluir recorrência"
+		>
+			<Trash2 class="size-3.5" aria-hidden="true" />
+			<span class="hidden sm:inline">{deleting ? '…' : 'Excluir'}</span>
 		</Button>
 	</Card.Footer>
 </Card.Root>

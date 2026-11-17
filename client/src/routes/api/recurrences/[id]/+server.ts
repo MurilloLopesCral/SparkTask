@@ -9,6 +9,7 @@ import {
 } from '$lib/server/db/schema';
 import { userCanAccessProject } from '$lib/server/projects';
 import {
+	deleteRecurrence,
 	getRecurrenceById,
 	materializeDueRecurrences,
 	setRecurrenceEnabled,
@@ -89,4 +90,19 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 	await materializeDueRecurrences();
 
 	return json({ recurrence: result.recurrence });
+};
+
+export const DELETE: RequestHandler = async ({ params, locals }) => {
+	if (!locals.user) error(401, 'Não autenticado.');
+
+	if (!(await userCanAccessRecurrence(locals.user.id, params.id))) {
+		return json({ message: 'Recorrência não encontrada ou sem acesso.' }, { status: 404 });
+	}
+
+	const result = await deleteRecurrence(params.id);
+	if (!result.ok) {
+		return json({ message: result.message }, { status: result.status });
+	}
+
+	return json({ ok: true });
 };

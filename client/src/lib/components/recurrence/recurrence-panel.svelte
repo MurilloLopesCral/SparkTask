@@ -3,7 +3,7 @@
 	import { Plus } from '@lucide/svelte';
 	import RecurrenceSheet from './recurrence-sheet.svelte';
 	import RecurrenceCard from './recurrence-card.svelte';
-	import { setRecurrenceEnabled } from '$lib/recurrence/api';
+	import { removeRecurrence, setRecurrenceEnabled } from '$lib/recurrence/api';
 	import type { RecurrenceRow } from '$lib/recurrence/types';
 
 	type Project = { id: string; name: string; groupId: string };
@@ -27,6 +27,7 @@
 	let editing = $state<RecurrenceRow | null>(null);
 	let startFrom = $state('');
 	let togglingId = $state<string | null>(null);
+	let deletingId = $state<string | null>(null);
 
 	$effect(() => {
 		if (openCreate) {
@@ -50,12 +51,26 @@
 	}
 
 	async function toggleEnabled(row: RecurrenceRow) {
-		if (togglingId) return;
+		if (togglingId || deletingId) return;
 		togglingId = row.id;
 		try {
 			await setRecurrenceEnabled(row.id, !row.enabled);
 		} finally {
 			togglingId = null;
+		}
+	}
+
+	async function handleDelete(row: RecurrenceRow) {
+		if (deletingId || togglingId) return;
+		const ok = confirm(
+			`Excluir a recorrência “${row.title}”? Tarefas já geradas permanecem; novas ocorrências deixam de ser criadas.`
+		);
+		if (!ok) return;
+		deletingId = row.id;
+		try {
+			await removeRecurrence(row.id);
+		} finally {
+			deletingId = null;
 		}
 	}
 </script>
@@ -82,8 +97,10 @@
 					<RecurrenceCard
 						{row}
 						toggling={togglingId === row.id}
+						deleting={deletingId === row.id}
 						onEdit={openEdit}
 						onToggle={toggleEnabled}
+						onDelete={handleDelete}
 					/>
 				</li>
 			{/each}

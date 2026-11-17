@@ -225,6 +225,16 @@ export async function setRecurrenceEnabled(id: string, enabled: boolean) {
 	return { ok: true as const, recurrence: updated };
 }
 
+/** Deletes the template; existing tasks keep their data (recurrenceId → null). */
+export async function deleteRecurrence(id: string) {
+	const [deleted] = await db
+		.delete(taskRecurrence)
+		.where(eq(taskRecurrence.id, id))
+		.returning({ id: taskRecurrence.id });
+	if (!deleted) return { ok: false as const, message: 'Recorrência não encontrada.', status: 404 };
+	return { ok: true as const };
+}
+
 async function materializeOne(row: typeof taskRecurrence.$inferSelect, occurrenceDate: string) {
 	const existing = await db.query.task.findFirst({
 		where: and(

@@ -1,5 +1,6 @@
 ﻿import { error, json } from '@sveltejs/kit';
 import { z } from 'zod';
+import { projectLifecycleSchema } from '$lib/projects/schemas';
 import { deleteProjectById, updateProjectFields, userCanAccessProject } from '$lib/server/projects';
 import type { RequestHandler } from './$types';
 
@@ -9,6 +10,7 @@ const patchProjectSchema = z
 		description: z.string().nullable(),
 		image: z.string().url().nullable()
 	})
+	.merge(projectLifecycleSchema)
 	.partial();
 
 /** PATCH /api/projects/:id — partial update, single endpoint for every editable field. */
@@ -25,8 +27,15 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 		return json({ message: 'Nada para atualizar.' }, { status: 400 });
 	}
 
-	await updateProjectFields(params.id, parsed.data);
-	return json({ success: true });
+	try {
+		await updateProjectFields(params.id, parsed.data);
+		return json({ success: true });
+	} catch (err) {
+		if (isUniqueViolation(err)) {
+			return json({ message: 'Este ID Plexus já está em uso.' }, { status: 409 });
+		}
+		throw err;
+	}
 };
 
 /** DELETE /api/projects/:id — cascades to every task in the project (see schema FK). */
@@ -38,3 +47,12 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 	await deleteProjectById(params.id);
 	return json({ success: true });
 };
+
+function isUniqueViolation(err: unknown) {
+	return (
+		typeof err === 'object' &&
+		err !== null &&
+		'code' in err &&
+		(err as { code?: string }).code === '23505'
+	);
+}

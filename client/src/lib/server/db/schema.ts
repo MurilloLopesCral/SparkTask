@@ -1,4 +1,5 @@
 ﻿import { relations } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import {
 	boolean,
 	date,
@@ -9,6 +10,7 @@ import {
 	primaryKey,
 	text,
 	timestamp,
+	uniqueIndex,
 	uuid,
 	varchar
 } from 'drizzle-orm/pg-core';
@@ -211,19 +213,38 @@ export const mcpAccessKey = pgTable('mcp_access_key', {
 // Domain — projects & tasks
 // ---------------------------------------------------------------------------
 
-export const project = pgTable('project', {
-	id: uuid('id').defaultRandom().primaryKey(),
-	name: varchar('name', { length: 255 }).notNull(),
-	description: text('description'),
-	/** Cloudinary URL for the project icon (catalog sticker photo). */
-	image: text('image'),
-	isActive: boolean('is_active').notNull().default(true),
-	groupId: uuid('group_id')
-		.notNull()
-		.references(() => group.id, { onDelete: 'cascade' }),
-	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
-});
+export const project = pgTable(
+	'project',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		name: varchar('name', { length: 255 }).notNull(),
+		description: text('description'),
+		/** Cloudinary URL for the project icon (catalog sticker photo). */
+		image: text('image'),
+		isActive: boolean('is_active').notNull().default(true),
+		groupId: uuid('group_id')
+			.notNull()
+			.references(() => group.id, { onDelete: 'cascade' }),
+		/** External id in Plexus PMI — reserved for future sync. */
+		plexusProjectId: varchar('plexus_project_id', { length: 64 }),
+		/** Implementation phase (construção / testes / entrega). */
+		implementationStart: date('implementation_start'),
+		implementationEnd: date('implementation_end'),
+		/** QO — assisted operations (operação assistida). */
+		assistedOpsStart: date('assisted_ops_start'),
+		assistedOpsEnd: date('assisted_ops_end'),
+		/** QP — performance monitoring (desempenho). */
+		performanceStart: date('performance_start'),
+		performanceEnd: date('performance_end'),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [
+		uniqueIndex('project_plexus_project_id_uidx')
+			.on(t.plexusProjectId)
+			.where(sql`${t.plexusProjectId} is not null`)
+	]
+);
 
 /**
  * Recurring task template — materializes concrete `task` rows.
