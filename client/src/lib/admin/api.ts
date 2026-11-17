@@ -73,3 +73,47 @@ export async function setAdminGroupActive(groupId: string, isActive: boolean) {
 	toast.success(isActive ? 'Grupo reativado.' : 'Grupo desativado.');
 	return true;
 }
+
+export type AdminUserPatch = {
+	isActive?: boolean;
+	plexusUserId?: number | null;
+};
+
+export async function updateAdminUser(userId: string, patch: AdminUserPatch) {
+	const res = await fetch(`/api/admin/users/${userId}`, {
+		method: 'PATCH',
+		headers: { 'content-type': 'application/json' },
+		body: JSON.stringify(patch)
+	});
+	const data = await res.json().catch(() => ({}));
+	await invalidateAll();
+
+	if (!res.ok) {
+		toast.error(data.message ?? 'Não foi possível atualizar o usuário.');
+		return false;
+	}
+	toast.success('Usuário atualizado.');
+	return true;
+}
+
+export type PlexusUserOption = {
+	id: number;
+	name: string | null;
+	email: string;
+	function: string;
+	isActive: boolean;
+};
+
+export async function searchAdminPlexusUsers(q: string): Promise<PlexusUserOption[] | null> {
+	const params = new URLSearchParams();
+	if (q.trim()) params.set('q', q.trim());
+	const res = await fetch(`/api/admin/plexus/users?${params}`);
+	const data = await res.json().catch(() => ({}));
+
+	if (!res.ok) {
+		toast.error(data.message ?? 'Não foi possível buscar usuários no Plexus.');
+		return null;
+	}
+
+	return (data.users ?? []) as PlexusUserOption[];
+}

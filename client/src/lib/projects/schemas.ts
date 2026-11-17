@@ -7,17 +7,19 @@ const optionalDate = z
 	.optional()
 	.transform((value) => (value === undefined || value === '' ? null : value));
 
-const optionalPlexusId = z
-	.union([z.string().max(64), z.literal(''), z.null()])
-	.optional()
-	.transform((value) => {
-		if (value === undefined || value === null) return null;
-		const trimmed = value.trim();
-		return trimmed.length === 0 ? null : trimmed;
-	});
+const optionalTrimmed = (max: number) =>
+	z
+		.union([z.string().max(max), z.literal(''), z.null()])
+		.optional()
+		.transform((value) => {
+			if (value === undefined || value === null) return null;
+			const trimmed = value.trim();
+			return trimmed.length === 0 ? null : trimmed;
+		});
 
 export const projectLifecycleSchema = z.object({
-	plexusProjectId: optionalPlexusId,
+	plexusProjectId: optionalTrimmed(64),
+	plexusTopicCode: optionalTrimmed(64),
 	implementationStart: optionalDate,
 	implementationEnd: optionalDate,
 	assistedOpsStart: optionalDate,

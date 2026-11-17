@@ -1,9 +1,10 @@
-/** Shared zod-friendly date helpers for project lifecycle fields. */
+/** Shared zod-friendly date helpers for project lifecycle + Plexus linkage. */
 
 export const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 export type ProjectLifecycleForm = {
 	plexusProjectId: string;
+	plexusTopicCode: string;
 	implementationStart: string;
 	implementationEnd: string;
 	assistedOpsStart: string;
@@ -15,6 +16,7 @@ export type ProjectLifecycleForm = {
 export function emptyLifecycleForm(): ProjectLifecycleForm {
 	return {
 		plexusProjectId: '',
+		plexusTopicCode: '',
 		implementationStart: '',
 		implementationEnd: '',
 		assistedOpsStart: '',
@@ -26,6 +28,7 @@ export function emptyLifecycleForm(): ProjectLifecycleForm {
 
 export function lifecycleFromProject(project: {
 	plexusProjectId?: string | null;
+	plexusTopicCode?: string | null;
 	implementationStart?: string | null;
 	implementationEnd?: string | null;
 	assistedOpsStart?: string | null;
@@ -35,6 +38,7 @@ export function lifecycleFromProject(project: {
 }): ProjectLifecycleForm {
 	return {
 		plexusProjectId: project.plexusProjectId ?? '',
+		plexusTopicCode: project.plexusTopicCode ?? '',
 		implementationStart: project.implementationStart ?? '',
 		implementationEnd: project.implementationEnd ?? '',
 		assistedOpsStart: project.assistedOpsStart ?? '',
@@ -49,6 +53,7 @@ export function lifecyclePayload(form: ProjectLifecycleForm) {
 	const emptyToNull = (value: string) => (value.trim() ? value.trim() : null);
 	return {
 		plexusProjectId: emptyToNull(form.plexusProjectId),
+		plexusTopicCode: emptyToNull(form.plexusTopicCode),
 		implementationStart: emptyToNull(form.implementationStart),
 		implementationEnd: emptyToNull(form.implementationEnd),
 		assistedOpsStart: emptyToNull(form.assistedOpsStart),

@@ -5,20 +5,39 @@
 	let { form = $bindable() }: { form: ProjectLifecycleForm & Record<string, string> } = $props();
 </script>
 
-<label class="flex flex-col gap-xxs">
-	<span class="font-sans text-ui-label uppercase">ID Plexus</span>
-	<input
-		class="text-input"
-		name="plexusProjectId"
-		autocomplete="off"
-		spellcheck="false"
-		placeholder="Opcional…"
-		bind:value={form.plexusProjectId}
-	/>
-	<span class="font-serif text-caption text-muted-foreground">
-		Identificador no Plexus PMI (integração futura).
-	</span>
-</label>
+<fieldset class="flex flex-col gap-sm border border-frame p-sm">
+	<legend class="px-xs font-sans text-ui-label uppercase">Integração Plexus</legend>
+
+	<label class="flex flex-col gap-xxs">
+		<span class="font-serif text-caption text-muted-foreground">ID do projeto (scopeId)</span>
+		<input
+			class="text-input"
+			name="plexusProjectId"
+			inputmode="numeric"
+			autocomplete="off"
+			spellcheck="false"
+			placeholder="Ex.: 12"
+			bind:value={form.plexusProjectId}
+		/>
+	</label>
+
+	<label class="flex flex-col gap-xxs">
+		<span class="font-serif text-caption text-muted-foreground">Código da task de execução (topicCode)</span>
+		<input
+			class="text-input"
+			name="plexusTopicCode"
+			autocomplete="off"
+			spellcheck="false"
+			placeholder="Ex.: 1.1"
+			bind:value={form.plexusTopicCode}
+		/>
+	</label>
+
+	<p class="font-serif text-caption text-muted-foreground">
+		Com ambos preenchidos, cada tarefa criada neste projeto vira um item de Gantt na task Plexus
+		correspondente.
+	</p>
+</fieldset>
 
 <fieldset class="flex flex-col gap-sm border border-frame p-sm">
 	<legend class="px-xs font-sans text-ui-label uppercase">Implementação</legend>

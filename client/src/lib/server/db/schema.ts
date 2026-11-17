@@ -70,18 +70,31 @@ export const recurrenceDueOffsetModeEnum = pgEnum('recurrence_due_offset_mode', 
 // https://www.better-auth.com/docs/concepts/database#core-schema
 // ---------------------------------------------------------------------------
 
-export const user = pgTable('user', {
-	id: uuid('id').defaultRandom().primaryKey(),
-	name: varchar('name', { length: 60 }),
-	email: varchar('email', { length: 60 }).notNull().unique(),
-	emailVerified: boolean('email_verified').notNull().default(false),
-	image: text('image'),
-	isActive: boolean('is_active').notNull().default(true),
-	/** Platform admin — create groups; set manually in DB (typically one user). */
-	isSystemAdmin: boolean('is_system_admin').notNull().default(false),
-	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
-});
+export const user = pgTable(
+	'user',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		name: varchar('name', { length: 60 }),
+		email: varchar('email', { length: 60 }).notNull().unique(),
+		emailVerified: boolean('email_verified').notNull().default(false),
+		image: text('image'),
+		isActive: boolean('is_active').notNull().default(true),
+		/** Platform admin — create groups; set manually in DB (typically one user). */
+		isSystemAdmin: boolean('is_system_admin').notNull().default(false),
+		/**
+		 * Id do usuário no Plexus PMI (`ownerId` nos gantts).
+		 * Somente system admin pode definir (governança).
+		 */
+		plexusUserId: integer('plexus_user_id'),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [
+		uniqueIndex('user_plexus_user_id_uidx')
+			.on(t.plexusUserId)
+			.where(sql`${t.plexusUserId} is not null`)
+	]
+);
 
 /**
  * Per-user business hours — cron pauses open executions outside this window.
@@ -225,8 +238,13 @@ export const project = pgTable(
 		groupId: uuid('group_id')
 			.notNull()
 			.references(() => group.id, { onDelete: 'cascade' }),
-		/** External id in Plexus PMI — reserved for future sync. */
+		/** External project id in Plexus PMI (`scopeId` when scopeType=PROJECT). */
 		plexusProjectId: varchar('plexus_project_id', { length: 64 }),
+		/**
+		 * topicCode da task de execução no Plexus — cada task Spark vira um gantt
+		 * sob essa task-pai (`POST /service/v1/ganttitems` com scope + topicCode).
+		 */
+		plexusTopicCode: varchar('plexus_topic_code', { length: 64 }),
 		/** Implementation phase (construção / testes / entrega). */
 		implementationStart: date('implementation_start'),
 		implementationEnd: date('implementation_end'),
@@ -311,6 +329,8 @@ export const task = pgTable('task', {
 	}),
 	/** Due date slot this occurrence was generated for (dedupe key with recurrenceId). */
 	recurrenceOccurrenceDate: date('recurrence_occurrence_date'),
+	/** Id do gantt item no Plexus após sync (null = ainda não enviado). */
+	plexusGanttItemId: integer('plexus_gantt_item_id'),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });

@@ -192,6 +192,8 @@ export interface CreateTaskInput {
 
 export async function createTask(input: CreateTaskInput) {
 	const [created] = await db.insert(task).values(input).returning();
+	const { syncTaskToPlexusGantt } = await import('./plexus/gantt-sync');
+	await syncTaskToPlexusGantt(created.id);
 	return created;
 }
 
@@ -225,8 +227,13 @@ export async function updateTaskFields(taskId: string, fields: TaskUpdateFields)
 	}
 
 	await db.update(task).set(patch).where(eq(task.id, taskId));
+
+	const { syncTaskToPlexusGantt } = await import('./plexus/gantt-sync');
+	await syncTaskToPlexusGantt(taskId);
 }
 
 export async function deleteTaskById(taskId: string) {
+	const { deleteTaskGanttFromPlexus } = await import('./plexus/gantt-sync');
+	await deleteTaskGanttFromPlexus(taskId);
 	await db.delete(task).where(eq(task.id, taskId));
 }

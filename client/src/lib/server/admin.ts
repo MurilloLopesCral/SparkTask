@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, ne, sql } from 'drizzle-orm';
 import { db } from './db';
 import { group, groupMember, invite, user } from './db/schema';
 import { createInvite } from './groups';
@@ -213,4 +213,86 @@ export async function listUsersForOwnerPicker() {
 		orderBy: [desc(user.createdAt)],
 		limit: 200
 	});
+}
+
+/** Full user directory for the admin Usuários tab. */
+export async function listUsersForAdmin() {
+	return db.query.user.findMany({
+		columns: {
+			id: true,
+			name: true,
+			email: true,
+			image: true,
+			isActive: true,
+			isSystemAdmin: true,
+			plexusUserId: true,
+			createdAt: true
+		},
+		orderBy: [desc(user.createdAt)],
+		limit: 500
+	});
+}
+
+export type AdminUserUpdate = {
+	isActive?: boolean;
+	plexusUserId?: number | null;
+};
+
+export async function updateAdminUser(userId: string, fields: AdminUserUpdate) {
+	if (fields.isActive === undefined && fields.plexusUserId === undefined) {
+		return { ok: false as const, message: 'Nada para atualizar.', status: 400 };
+	}
+
+	if (fields.isActive === false) {
+		const target = await db.query.user.findFirst({
+			where: eq(user.id, userId),
+			columns: { isSystemAdmin: true }
+		});
+		if (target?.isSystemAdmin) {
+			return {
+				ok: false as const,
+				message: 'Não é possível inativar um system admin.',
+				status: 400
+			};
+		}
+	}
+
+	if (fields.plexusUserId != null) {
+		const clash = await db.query.user.findFirst({
+			where: and(eq(user.plexusUserId, fields.plexusUserId), ne(user.id, userId)),
+			columns: { id: true, email: true }
+		});
+		if (clash) {
+			return {
+				ok: false as const,
+				message: `ID Plexus ${fields.plexusUserId} já vinculado a ${clash.email}.`,
+				status: 409
+			};
+		}
+	}
+
+	const patch: {
+		isActive?: boolean;
+		plexusUserId?: number | null;
+		updatedAt: Date;
+	} = { updatedAt: new Date() };
+	if (fields.isActive !== undefined) patch.isActive = fields.isActive;
+	if (fields.plexusUserId !== undefined) patch.plexusUserId = fields.plexusUserId;
+
+	const [updated] = await db
+		.update(user)
+		.set(patch)
+		.where(eq(user.id, userId))
+		.returning({
+			id: user.id,
+			name: user.name,
+			email: user.email,
+			isActive: user.isActive,
+			plexusUserId: user.plexusUserId
+		});
+
+	if (!updated) {
+		return { ok: false as const, message: 'Usuário não encontrado.', status: 404 };
+	}
+	return { ok: true as const, user: updated };
 }

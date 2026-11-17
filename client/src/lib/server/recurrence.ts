@@ -250,20 +250,29 @@ async function materializeOne(row: typeof taskRecurrence.$inferSelect, occurrenc
 		days: row.dueOffsetDays
 	});
 
-	await db.insert(task).values({
-		title: row.title,
-		description: row.description,
-		projectId: row.projectId,
-		dueDate,
-		priority: row.priority,
-		type: row.type,
-		kind: row.kind,
-		ownerId: row.ownerId,
-		createdBy: row.createdBy,
-		status: 'not_started',
-		recurrenceId: row.id,
-		recurrenceOccurrenceDate: occurrenceDate
-	});
+	const [created] = await db
+		.insert(task)
+		.values({
+			title: row.title,
+			description: row.description,
+			projectId: row.projectId,
+			dueDate,
+			priority: row.priority,
+			type: row.type,
+			kind: row.kind,
+			ownerId: row.ownerId,
+			createdBy: row.createdBy,
+			status: 'not_started',
+			recurrenceId: row.id,
+			recurrenceOccurrenceDate: occurrenceDate
+		})
+		.returning({ id: task.id });
+
+	if (created) {
+		const { syncTaskToPlexusGantt } = await import('./plexus/gantt-sync');
+		await syncTaskToPlexusGantt(created.id);
+	}
+
 	return { created: true };
 }
 

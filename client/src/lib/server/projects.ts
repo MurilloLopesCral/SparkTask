@@ -48,6 +48,7 @@ export async function userCanAccessProject(userId: string, projectId: string) {
 
 export type ProjectLifecycleFields = {
 	plexusProjectId?: string | null;
+	plexusTopicCode?: string | null;
 	implementationStart?: string | null;
 	implementationEnd?: string | null;
 	assistedOpsStart?: string | null;
@@ -93,6 +94,7 @@ const roadmapColumns = {
 	name: true,
 	groupId: true,
 	plexusProjectId: true,
+	plexusTopicCode: true,
 	implementationStart: true,
 	implementationEnd: true,
 	assistedOpsStart: true,
