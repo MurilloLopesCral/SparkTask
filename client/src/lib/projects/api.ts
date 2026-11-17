@@ -102,3 +102,38 @@ export async function removeProject(projectId: string) {
 	}
 	toast.success('Projeto excluído.');
 }
+
+export type PlexusProjectSyncSummary = {
+	total: number;
+	created: number;
+	updated: number;
+	skipped: number;
+	failed: number;
+	skipReasons: {
+		noOwnerPlexus: number;
+		noProjectLink: number;
+		notConfigured: number;
+	};
+};
+
+/** Owner-only retroactive sync of project tasks → Plexus gantts. */
+export async function syncProjectToPlexus(projectId: string) {
+	const res = await fetch(`/api/projects/${projectId}/plexus-sync`, { method: 'POST' });
+	const data = await res.json().catch(() => ({}));
+	await invalidateAll();
+
+	if (!res.ok) {
+		toast.error(data.message ?? 'Não foi possível sincronizar com o Plexus.');
+		return null;
+	}
+
+	const summary = data.summary as PlexusProjectSyncSummary;
+	const parts = [
+		`${summary.created} criados`,
+		`${summary.updated} atualizados`,
+		`${summary.skipped} ignorados`,
+		`${summary.failed} falhas`
+	];
+	toast.success(`Sync Plexus: ${parts.join(' · ')} (${summary.total} tarefas).`);
+	return summary;
+}

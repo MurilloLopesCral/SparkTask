@@ -5,6 +5,10 @@
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	const ownedGroupIds = $derived(
+		new Set(data.groups.filter((g) => g.role === 'owner').map((g) => g.id))
+	);
 </script>
 
 <svelte:head><title>Projetos — SparkTask</title></svelte:head>
@@ -30,7 +34,7 @@
 	{:else}
 		<div class="grid grid-cols-1 gap-md sm:grid-cols-2 lg:grid-cols-3">
 			{#each data.projects as project (project.id)}
-				<ProjectCard {project} />
+				<ProjectCard {project} canSyncPlexus={ownedGroupIds.has(project.groupId)} />
 			{/each}
 		</div>
 	{/if}

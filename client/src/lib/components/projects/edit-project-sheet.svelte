@@ -4,6 +4,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import {
 		clearProjectImage,
+		syncProjectToPlexus,
 		updateProject,
 		uploadProjectImage
 	} from '$lib/projects/api';
@@ -12,14 +13,28 @@
 	import ProjectImageField from './project-image-field.svelte';
 	import ProjectLifecycleFields from './project-lifecycle-fields.svelte';
 
-	let { project, open = $bindable(false) }: { project: VisibleProject; open?: boolean } = $props();
+	let {
+		project,
+		canSyncPlexus = false,
+		open = $bindable(false)
+	}: {
+		project: VisibleProject;
+		/** Group owner — may run retroactive Plexus sync. */
+		canSyncPlexus?: boolean;
+		open?: boolean;
+	} = $props();
 
 	let submitting = $state(false);
+	let syncing = $state(false);
 	let form = $state(untrack(() => toFormState(project)));
 	let imageUrl = $state<string | null>(untrack(() => project.image ?? null));
 	let pendingFile = $state<File | null>(null);
 	let cleared = $state(false);
 	let wasOpen = false;
+
+	const plexusReady = $derived(
+		Boolean(form.plexusProjectId.trim() && form.plexusTopicCode.trim())
+	);
 
 	function toFormState(p: VisibleProject) {
 		return {
@@ -66,6 +81,26 @@
 			submitting = false;
 		}
 	}
+
+	async function handlePlexusSync() {
+		if (!canSyncPlexus || syncing) return;
+		syncing = true;
+		try {
+			// Persist linkage first if the form has unsaved Plexus fields.
+			const linkChanged =
+				(form.plexusProjectId.trim() || null) !== (project.plexusProjectId ?? null) ||
+				(form.plexusTopicCode.trim() || null) !== (project.plexusTopicCode ?? null);
+
+			if (linkChanged) {
+				const saved = await updateProject(project.id, form);
+				if (!saved) return;
+			}
+
+			await syncProjectToPlexus(project.id);
+		} finally {
+			syncing = false;
+		}
+	}
 </script>
 
 <Sheet.Root bind:open>
@@ -107,10 +142,34 @@
 				</label>
 
 				<ProjectLifecycleFields bind:form />
+
+				{#if canSyncPlexus}
+					<div class="flex flex-col gap-sm border border-frame p-sm">
+						<p class="font-sans text-ui-label uppercase">Sync retroativo</p>
+						<p class="font-serif text-caption text-muted-foreground">
+							Envia (ou atualiza) no Plexus o gantt de cada tarefa já existente neste projeto.
+							Responsáveis sem vínculo Plexus são ignorados.
+						</p>
+						<Button
+							type="button"
+							variant="secondary"
+							class="min-h-11 w-full"
+							disabled={syncing || submitting || !plexusReady}
+							onclick={handlePlexusSync}
+						>
+							{syncing ? 'Sincronizando…' : 'Sincronizar tarefas no Plexus'}
+						</Button>
+						{#if !plexusReady}
+							<p class="font-serif text-caption text-muted-foreground">
+								Preencha ID do projeto e topicCode para habilitar.
+							</p>
+						{/if}
+					</div>
+				{/if}
 			</div>
 
 			<Sheet.Footer>
-				<Button type="submit" disabled={submitting}>
+				<Button type="submit" disabled={submitting || syncing}>
 					{submitting ? 'Salvando…' : 'Salvar'}
 				</Button>
 			</Sheet.Footer>

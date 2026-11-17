@@ -15,7 +15,13 @@
 	import { removeProject } from '$lib/projects/api';
 	import type { VisibleProject } from '$lib/server/projects';
 
-	let { project }: { project: VisibleProject } = $props();
+	let {
+		project,
+		canSyncPlexus = false
+	}: {
+		project: VisibleProject;
+		canSyncPlexus?: boolean;
+	} = $props();
 
 	let editOpen = $state(false);
 	let reportOpen = $state(false);
@@ -71,5 +77,5 @@
 	</Card.Content>
 </Card.Root>
 
-<EditProjectSheet {project} bind:open={editOpen} />
+<EditProjectSheet {project} {canSyncPlexus} bind:open={editOpen} />
 <StatusReportDialog {project} bind:open={reportOpen} />
