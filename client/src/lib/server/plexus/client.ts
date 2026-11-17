@@ -120,5 +120,9 @@ export async function searchPlexusUsers(query: string, limit = 20) {
 	const q = query.trim();
 	const params = new URLSearchParams({ limit: String(limit) });
 	if (q) params.set('q', q);
-	return plexusFetch<PlexusUserSummary[]>(`/service/v1/users?${params}`);
+	const body = await plexusFetch<PlexusUserSummary[] | { data: PlexusUserSummary[] }>(
+		`/service/v1/users?${params}`
+	);
+	// Plexus returns a paginated envelope `{ data, page, limit, total }`.
+	return Array.isArray(body) ? body : (body?.data ?? []);
 }
