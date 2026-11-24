@@ -14,12 +14,18 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Toggle } from '$lib/components/ui/toggle/index.js';
 	import { HugeiconsIcon } from '@hugeicons/svelte';
-	import { FilterIcon, PauseIcon, RefreshIcon, Search01Icon } from '@hugeicons/core-free-icons';
+	import {
+		Add01Icon,
+		FilterIcon,
+		PauseIcon,
+		RefreshIcon,
+		Search01Icon
+	} from '@hugeicons/core-free-icons';
 	import * as Field from '$lib/components/ui/field/index.js';
 	import TaskTable from '$lib/components/tasks/task-table.svelte';
 	import TaskKanban from '$lib/components/tasks/task-kanban.svelte';
 	import TaskList from '$lib/components/tasks/task-list.svelte';
-	import CreateTaskSheet from '$lib/components/tasks/create-task-sheet.svelte';
+	import TaskDetailsDialog from '$lib/components/tasks/task-details-dialog.svelte';
 	import { TASK_STATUSES, TASK_PRIORITIES, TASK_TYPES } from '$lib/tasks/constants';
 	import { toDateKey } from '$lib/tasks/format';
 	import { pauseAllTaskExecutions } from '$lib/tasks/execution-api';
@@ -27,6 +33,7 @@
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+	let createOpen = $state(false);
 
 	const isMobile = new IsMobile();
 	const VIEW_STORAGE_KEY = 'sparktask:tasks-view';
@@ -561,11 +568,12 @@
 				</Tabs.Root>
 			</div>
 
-			<CreateTaskSheet
-				projects={data.projects}
-				groupMembers={data.groupMembers}
-				initialProjectId={projectFilter === 'all' ? '' : projectFilter}
-			/>
+			{#if data.projects.length > 0}
+				<Button onclick={() => (createOpen = true)}>
+					<HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
+					Criar tarefa
+				</Button>
+			{/if}
 		</div>
 	</div>
 
@@ -576,11 +584,12 @@
 				<Empty.Description>As tarefas dos seus grupos vão aparecer aqui.</Empty.Description>
 			</Empty.Header>
 			<Empty.Content>
-				<CreateTaskSheet
-					projects={data.projects}
-					groupMembers={data.groupMembers}
-					initialProjectId={projectFilter === 'all' ? '' : projectFilter}
-				/>
+				{#if data.projects.length > 0}
+					<Button onclick={() => (createOpen = true)}>
+						<HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
+						Criar tarefa
+					</Button>
+				{/if}
 			</Empty.Content>
 		</Empty.Root>
 	{:else if filteredTasks.length === 0}
@@ -615,3 +624,14 @@
 		/>
 	{/if}
 </div>
+
+{#if data.projects.length > 0}
+	<TaskDetailsDialog
+		task={null}
+		projects={data.projects}
+		groupMembers={data.groupMembers}
+		fileUploadConfig={data.fileUploadConfig}
+		initialProjectId={projectFilter === 'all' ? '' : projectFilter}
+		bind:open={createOpen}
+	/>
+{/if}

@@ -33,7 +33,7 @@
 	} from '$lib/tasks/constants';
 	import { formatDate, formatFileSize, dueDateStatusClass } from '$lib/tasks/format';
 	import { getInitials } from '$lib/users/format';
-	import { saveTask, saveTaskDescription, setTaskStatus } from '$lib/tasks/api';
+	import { createTask, saveTask, saveTaskDescription, setTaskStatus } from '$lib/tasks/api';
 	import { handleMarkdownTextareaKeydown, toggleMarkdownTaskAt } from '$lib/tasks/markdown-editor';
 	import {
 		uploadTaskFile,
@@ -47,20 +47,29 @@
 	import type { VisibleTask } from '$lib/server/tasks';
 
 	let {
-		task,
+		task = null,
 		projects,
 		groupMembers,
-		fileUploadConfig,
+		fileUploadConfig = null,
 		open = $bindable(false),
-		initialEditing = false
+		initialEditing = false,
+		initialDueDate = '',
+		initialProjectId = ''
 	}: {
-		task: VisibleTask;
+		/** `null` = create mode (empty form). */
+		task?: VisibleTask | null;
 		projects: TaskProjectOption[];
 		groupMembers: { groupId: string; id: string; name: string | null; email: string }[];
-		fileUploadConfig: FileUploadConfig;
+		fileUploadConfig?: FileUploadConfig | null;
 		open?: boolean;
 		initialEditing?: boolean;
+		/** Prefill prazo when creating (e.g. from calendar). */
+		initialDueDate?: string;
+		/** Prefill projeto when creating (e.g. active filter on /tasks). */
+		initialProjectId?: string;
 	} = $props();
+
+	const isCreating = $derived(task == null);
 
 	let editing = $state(false);
 	let saving = $state(false);
@@ -69,9 +78,36 @@
 	let executionsOpen = $state(false);
 	let copyingImageId = $state<string | null>(null);
 	// Seed once; open/effect below refreshes — avoid poll wiping in-progress edits.
-	let form = $state(untrack(() => toFormState(task)));
-	let viewDescription = $state(untrack(() => task.description ?? ''));
+	let form = $state(untrack(() => (task ? toFormState(task) : emptyForm())));
+	let viewDescription = $state(untrack(() => task?.description ?? ''));
 	let descriptionEl = $state<HTMLTextAreaElement | null>(null);
+
+	function defaultProjectId() {
+		if (initialProjectId && projects.some((p) => p.id === initialProjectId)) {
+			return initialProjectId;
+		}
+		return projects[0]?.id ?? '';
+	}
+
+	function defaultVersionId(projectId: string) {
+		return projects.find((p) => p.id === projectId)?.versions[0]?.id ?? '';
+	}
+
+	function emptyForm(dueDate = '') {
+		const projectId = defaultProjectId();
+		return {
+			title: '',
+			description: '',
+			status: 'not_started',
+			priority: 'medium',
+			type: 'mandatory',
+			kind: 'improvement',
+			dueDate,
+			ownerId: '',
+			projectId,
+			projectVersionId: defaultVersionId(projectId)
+		};
+	}
 
 	function toFormState(t: VisibleTask) {
 		return {
@@ -105,28 +141,34 @@
 	});
 	const projectLabel = $derived(
 		editing
-			? (selectedProject?.name ?? task.project.name)
-			: `${task.project.name} · ${task.version?.label ?? '—'}`
+			? (selectedProject?.name ?? task?.project.name ?? 'Nova tarefa')
+			: `${task?.project.name ?? ''} · ${task?.version?.label ?? '—'}`
 	);
-	const ownerName = $derived(task.owner?.name || task.owner?.email || 'Sem responsável');
-	const creatorName = $derived(task.creator.name || task.creator.email);
+	const ownerName = $derived(task?.owner?.name || task?.owner?.email || 'Sem responsável');
+	const creatorName = $derived(task?.creator.name || task?.creator.email || '');
 
 	// Seed draft/edit mode only when the dialog opens — not when `task` refreshes
 	// from the 30s poll / invalidateAll (that was wiping in-progress edits).
 	let wasOpen = false;
 	$effect(() => {
 		if (open && !wasOpen) {
-			form = toFormState(task);
-			viewDescription = task.description ?? '';
-			editing = initialEditing;
+			if (task) {
+				form = toFormState(task);
+				viewDescription = task.description ?? '';
+				editing = initialEditing;
+			} else {
+				form = emptyForm(initialDueDate);
+				viewDescription = '';
+				editing = true;
+			}
 		}
 		wasOpen = open;
 	});
 
 	// Keep view-mode description in sync with live task data (polls, todo toggles).
 	$effect(() => {
-		if (!editing && !togglingTodo) {
-			viewDescription = task.description ?? '';
+		if (!isCreating && !editing && !togglingTodo) {
+			viewDescription = task?.description ?? '';
 		}
 	});
 
@@ -139,21 +181,40 @@
 	});
 
 	async function handleSave() {
+		if (!form.title.trim()) {
+			toast.error('Informe o título da tarefa.');
+			return;
+		}
+		if (!form.projectId || !form.projectVersionId) {
+			toast.error('Selecione um projeto e uma versão.');
+			return;
+		}
+
 		saving = true;
 		try {
-			if (await saveTask(task.id, form)) editing = false;
+			if (isCreating) {
+				const res = await createTask(form);
+				if (res.ok) open = false;
+			} else if (task && (await saveTask(task.id, form))) {
+				editing = false;
+			}
 		} finally {
 			saving = false;
 		}
 	}
 
 	function handleDiscard() {
+		if (isCreating) {
+			open = false;
+			return;
+		}
+		if (!task) return;
 		form = toFormState(task);
 		editing = false;
 	}
 
 	async function handleToggleTodo(index: number) {
-		if (togglingTodo) return;
+		if (!task || togglingTodo) return;
 		const next = toggleMarkdownTaskAt(viewDescription, index);
 		if (next == null) return;
 
@@ -179,11 +240,13 @@
 	}
 
 	async function handleCancelTask() {
+		if (!task) return;
 		await setTaskStatus(task.id, 'cancelled');
 		open = false;
 	}
 
 	function validateAttachment(file: File): string | null {
+		if (!fileUploadConfig) return 'Upload de arquivos indisponível.';
 		const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
 		if (!fileUploadConfig.allowedExtensions.includes(extension)) {
 			return `Formato não permitido. Use: ${fileUploadConfig.allowedExtensions.join(', ')}.`;
@@ -196,7 +259,7 @@
 	}
 
 	async function attachFiles(files: File[]) {
-		if (files.length === 0 || uploading) return;
+		if (!task || files.length === 0 || uploading) return;
 
 		uploading = true;
 		try {
@@ -237,7 +300,7 @@
 
 	/** Attachment paste only with no field focus, or description focused. */
 	function canPasteAttachment(target: EventTarget | null): boolean {
-		if (!editing) return false;
+		if (isCreating || !editing) return false;
 
 		const active = document.activeElement;
 		if (descriptionEl && (active === descriptionEl || target === descriptionEl)) return true;
@@ -277,19 +340,20 @@
 					<input
 						class="font-display text-h3 text-input uppercase"
 						bind:value={form.title}
+						placeholder={isCreating ? 'Título da tarefa' : undefined}
 						aria-label="Título da tarefa"
 					/>
-				{:else}
+				{:else if task}
 					<AlertDialog.Title>{task.title}</AlertDialog.Title>
 				{/if}
 				<div class="flex flex-wrap items-center gap-xs">
 					<AlertDialog.Description class="m-0">{projectLabel}</AlertDialog.Description>
-					{#if !editing}
+					{#if !editing && task}
 						<KindBadge kind={task.kind} />
 					{/if}
 				</div>
 			</div>
-			{#if !editing}
+			{#if !editing && task}
 				<div class="flex shrink-0 items-center gap-xxs">
 					<Tooltip.Root>
 						<Tooltip.Trigger>
@@ -329,16 +393,19 @@
 
 		{#if editing}
 			<div class="flex flex-wrap gap-sm">
-				<Select.Root type="single" bind:value={form.status}>
-					<Select.Trigger
-						>{TASK_STATUS_META[form.status as keyof typeof TASK_STATUS_META].label}</Select.Trigger
-					>
-					<Select.Content>
-						{#each TASK_STATUSES as option (option.value)}
-							<Select.Item value={option.value} label={option.label} />
-						{/each}
-					</Select.Content>
-				</Select.Root>
+				{#if !isCreating}
+					<Select.Root type="single" bind:value={form.status}>
+						<Select.Trigger
+							>{TASK_STATUS_META[form.status as keyof typeof TASK_STATUS_META]
+								.label}</Select.Trigger
+						>
+						<Select.Content>
+							{#each TASK_STATUSES as option (option.value)}
+								<Select.Item value={option.value} label={option.label} />
+							{/each}
+						</Select.Content>
+					</Select.Root>
+				{/if}
 
 				<Select.Root type="single" bind:value={form.priority}>
 					<Select.Trigger
@@ -381,8 +448,7 @@
 					type="single"
 					bind:value={form.projectId}
 					onValueChange={(id) => {
-						form.projectVersionId =
-							projects.find((p) => p.id === id)?.versions[0]?.id ?? '';
+						form.projectVersionId = projects.find((p) => p.id === id)?.versions[0]?.id ?? '';
 					}}
 				>
 					<Select.Trigger class="w-full">
@@ -401,7 +467,7 @@
 				<Select.Root type="single" bind:value={form.projectVersionId}>
 					<Select.Trigger class="w-full">
 						{availableVersions.find((v) => v.id === form.projectVersionId)?.label ??
-							task.version?.label ??
+							task?.version?.label ??
 							'Selecione'}
 					</Select.Trigger>
 					<Select.Content>
@@ -447,8 +513,9 @@
 					></textarea>
 				</div>
 				<span class="font-serif text-caption text-muted-foreground">
-					Aceita Markdown (ToDos, tabelas, código). Ctrl+V (⌘V) cola anexos aqui ou com o diálogo
-					focado.
+					Aceita Markdown (ToDos, tabelas, código).{#if !isCreating}
+						Ctrl+V (⌘V) cola anexos aqui ou com o diálogo focado.
+					{/if}
 				</span>
 			</div>
 
@@ -456,7 +523,7 @@
 				<span class="font-sans text-ui-label uppercase">Prazo</span>
 				<input type="date" class="text-input" bind:value={form.dueDate} />
 			</label>
-		{:else}
+		{:else if task}
 			<div class="flex flex-wrap items-center gap-xs">
 				<StatusBadge status={task.status} />
 				<span class="font-serif text-caption text-muted-foreground">
@@ -475,156 +542,173 @@
 			{/if}
 		{/if}
 
-		<dl
-			class="grid grid-cols-2 gap-x-lg gap-y-xs border-t border-frame pt-md font-serif text-body-sm"
-		>
-			<dt class="text-muted-foreground">Responsável</dt>
-			<dd class="flex items-center gap-xs">
-				<Avatar.Root size="sm" class="size-6">
-					<Avatar.Image src={task.owner?.image} alt={ownerName} />
-					<Avatar.Fallback class="text-[10px]">
-						{task.owner ? getInitials(task.owner.name, task.owner.email) : '—'}
-					</Avatar.Fallback>
-				</Avatar.Root>
-				{ownerName}
-			</dd>
+		{#if task}
+			<dl
+				class="grid grid-cols-2 gap-x-lg gap-y-xs border-t border-frame pt-md font-serif text-body-sm"
+			>
+				<dt class="text-muted-foreground">Responsável</dt>
+				<dd class="flex items-center gap-xs">
+					<Avatar.Root size="sm" class="size-6">
+						<Avatar.Image src={task.owner?.image} alt={ownerName} />
+						<Avatar.Fallback class="text-[10px]">
+							{task.owner ? getInitials(task.owner.name, task.owner.email) : '—'}
+						</Avatar.Fallback>
+					</Avatar.Root>
+					{ownerName}
+				</dd>
 
-			<dt class="text-muted-foreground">Criado por</dt>
-			<dd class="flex items-center gap-xs">
-				<Avatar.Root size="sm" class="size-6">
-					<Avatar.Image src={task.creator.image} alt={creatorName} />
-					<Avatar.Fallback class="text-[10px]">
-						{getInitials(task.creator.name, task.creator.email)}
-					</Avatar.Fallback>
-				</Avatar.Root>
-				{creatorName}
-			</dd>
+				<dt class="text-muted-foreground">Criado por</dt>
+				<dd class="flex items-center gap-xs">
+					<Avatar.Root size="sm" class="size-6">
+						<Avatar.Image src={task.creator.image} alt={creatorName} />
+						<Avatar.Fallback class="text-[10px]">
+							{getInitials(task.creator.name, task.creator.email)}
+						</Avatar.Fallback>
+					</Avatar.Root>
+					{creatorName}
+				</dd>
 
-			{#if !editing}
-				{#if task.status === 'done'}
-					<dt class="text-muted-foreground">Concluída em</dt>
-					<dd class="font-medium text-tint-sage">
-						{formatDate(task.finishedAt) ?? '—'}
-					</dd>
-				{:else}
-					<dt class="text-muted-foreground">Prazo</dt>
-					<dd class="font-medium {dueDateStatusClass(task.dueDate)}">
-						{formatDate(task.dueDate) ?? '—'}
-					</dd>
-				{/if}
-			{/if}
-
-			<dt class="text-muted-foreground">Criada em</dt>
-			<dd>{formatDate(task.createdAt) ?? '—'}</dd>
-		</dl>
-
-		<div class="flex flex-col gap-sm border-t border-frame pt-md">
-			<div class="flex items-center justify-between">
-				<span class="font-sans text-ui-label uppercase">Anexos</span>
-				<label class="btn-secondary {uploading ? 'pointer-events-none opacity-40' : ''}">
-					<HugeiconsIcon icon={Attachment01Icon} strokeWidth={2} />
-					{uploading ? 'Enviando…' : 'Anexar arquivo'}
-					<input type="file" class="hidden" onchange={handleFileSelect} disabled={uploading} />
-				</label>
-			</div>
-
-			{#if task.files.length === 0}
-				<p class="font-serif text-caption text-muted-foreground">
-					Nenhum arquivo anexado.{#if editing}
-						Cole um arquivo com Ctrl+V.
+				{#if !editing}
+					{#if task.status === 'done'}
+						<dt class="text-muted-foreground">Concluída em</dt>
+						<dd class="font-medium text-tint-sage">
+							{formatDate(task.finishedAt) ?? '—'}
+						</dd>
+					{:else}
+						<dt class="text-muted-foreground">Prazo</dt>
+						<dd class="font-medium {dueDateStatusClass(task.dueDate)}">
+							{formatDate(task.dueDate) ?? '—'}
+						</dd>
 					{/if}
-				</p>
-			{:else}
-				<ul class="flex flex-col gap-xs">
-					{#each task.files as attachment (attachment.id)}
-						<li class="flex items-center gap-sm border border-frame bg-canvas px-sm py-xs">
-							<div class="flex flex-1 items-center gap-xs overflow-hidden font-serif text-body-sm">
-								<HugeiconsIcon icon={File02Icon} strokeWidth={2} class="size-4 shrink-0" />
-								<span class="truncate">{attachment.name}</span>
-							</div>
-							<span class="shrink-0 font-serif text-caption text-muted-foreground">
-								{formatFileSize(attachment.size)}
-							</span>
-							<Tooltip.Root>
-								<Tooltip.Trigger>
-									{#snippet child({ props })}
-										<a
-											{...props}
-											href={attachment.assetUrl}
-											target="_blank"
-											rel="external noopener noreferrer"
-											class="grid size-6 shrink-0 place-items-center"
-										>
-											<HugeiconsIcon icon={ViewIcon} strokeWidth={2} />
-											<span class="sr-only">Visualizar arquivo</span>
-										</a>
-									{/snippet}
-								</Tooltip.Trigger>
-								<Tooltip.Content>Visualizar arquivo</Tooltip.Content>
-							</Tooltip.Root>
-							{#if isImageAttachment(attachment)}
-								<Tooltip.Root>
-									<Tooltip.Trigger>
-										{#snippet child({ props })}
-											<button
-												{...props}
-												type="button"
-												class="grid size-6 shrink-0 cursor-pointer place-items-center disabled:opacity-40"
-												disabled={copyingImageId === attachment.id}
-												onclick={() => handleCopyImage(attachment)}
-											>
-												<HugeiconsIcon icon={Copy01Icon} strokeWidth={2} />
-												<span class="sr-only">Copiar imagem</span>
-											</button>
-										{/snippet}
-									</Tooltip.Trigger>
-									<Tooltip.Content>Copiar imagem</Tooltip.Content>
-								</Tooltip.Root>
+				{/if}
+
+				<dt class="text-muted-foreground">Criada em</dt>
+				<dd>{formatDate(task.createdAt) ?? '—'}</dd>
+			</dl>
+
+			{#if fileUploadConfig}
+				<div class="flex flex-col gap-sm border-t border-frame pt-md">
+					<div class="flex items-center justify-between">
+						<span class="font-sans text-ui-label uppercase">Anexos</span>
+						<label class="btn-secondary {uploading ? 'pointer-events-none opacity-40' : ''}">
+							<HugeiconsIcon icon={Attachment01Icon} strokeWidth={2} />
+							{uploading ? 'Enviando…' : 'Anexar arquivo'}
+							<input
+								type="file"
+								class="hidden"
+								onchange={handleFileSelect}
+								disabled={uploading}
+							/>
+						</label>
+					</div>
+
+					{#if task.files.length === 0}
+						<p class="font-serif text-caption text-muted-foreground">
+							Nenhum arquivo anexado.{#if editing}
+								Cole um arquivo com Ctrl+V.
 							{/if}
-							<Tooltip.Root>
-								<Tooltip.Trigger>
-									{#snippet child({ props })}
-										<a
-											{...props}
-											href={taskFileDownloadUrl(attachment.assetUrl)}
-											download={attachment.name}
-											rel="external"
-											class="grid size-6 shrink-0 place-items-center"
-										>
-											<HugeiconsIcon icon={Download01Icon} strokeWidth={2} />
-											<span class="sr-only">Baixar arquivo</span>
-										</a>
-									{/snippet}
-								</Tooltip.Trigger>
-								<Tooltip.Content>Baixar arquivo</Tooltip.Content>
-							</Tooltip.Root>
-							<Tooltip.Root>
-								<Tooltip.Trigger>
-									{#snippet child({ props })}
-										<button
-											{...props}
-											type="button"
-											class="grid size-6 shrink-0 cursor-pointer place-items-center"
-											onclick={() => removeTaskFile(attachment.id)}
-										>
-											<HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
-											<span class="sr-only">Excluir arquivo</span>
-										</button>
-									{/snippet}
-								</Tooltip.Trigger>
-								<Tooltip.Content>Excluir arquivo</Tooltip.Content>
-							</Tooltip.Root>
-						</li>
-					{/each}
-				</ul>
+						</p>
+					{:else}
+						<ul class="flex flex-col gap-xs">
+							{#each task.files as attachment (attachment.id)}
+								<li class="flex items-center gap-sm border border-frame bg-canvas px-sm py-xs">
+									<div
+										class="flex flex-1 items-center gap-xs overflow-hidden font-serif text-body-sm"
+									>
+										<HugeiconsIcon icon={File02Icon} strokeWidth={2} class="size-4 shrink-0" />
+										<span class="truncate">{attachment.name}</span>
+									</div>
+									<span class="shrink-0 font-serif text-caption text-muted-foreground">
+										{formatFileSize(attachment.size)}
+									</span>
+									<Tooltip.Root>
+										<Tooltip.Trigger>
+											{#snippet child({ props })}
+												<a
+													{...props}
+													href={attachment.assetUrl}
+													target="_blank"
+													rel="external noopener noreferrer"
+													class="grid size-6 shrink-0 place-items-center"
+												>
+													<HugeiconsIcon icon={ViewIcon} strokeWidth={2} />
+													<span class="sr-only">Visualizar arquivo</span>
+												</a>
+											{/snippet}
+										</Tooltip.Trigger>
+										<Tooltip.Content>Visualizar arquivo</Tooltip.Content>
+									</Tooltip.Root>
+									{#if isImageAttachment(attachment)}
+										<Tooltip.Root>
+											<Tooltip.Trigger>
+												{#snippet child({ props })}
+													<button
+														{...props}
+														type="button"
+														class="grid size-6 shrink-0 cursor-pointer place-items-center disabled:opacity-40"
+														disabled={copyingImageId === attachment.id}
+														onclick={() => handleCopyImage(attachment)}
+													>
+														<HugeiconsIcon icon={Copy01Icon} strokeWidth={2} />
+														<span class="sr-only">Copiar imagem</span>
+													</button>
+												{/snippet}
+											</Tooltip.Trigger>
+											<Tooltip.Content>Copiar imagem</Tooltip.Content>
+										</Tooltip.Root>
+									{/if}
+									<Tooltip.Root>
+										<Tooltip.Trigger>
+											{#snippet child({ props })}
+												<a
+													{...props}
+													href={taskFileDownloadUrl(attachment.assetUrl)}
+													download={attachment.name}
+													rel="external"
+													class="grid size-6 shrink-0 place-items-center"
+												>
+													<HugeiconsIcon icon={Download01Icon} strokeWidth={2} />
+													<span class="sr-only">Baixar arquivo</span>
+												</a>
+											{/snippet}
+										</Tooltip.Trigger>
+										<Tooltip.Content>Baixar arquivo</Tooltip.Content>
+									</Tooltip.Root>
+									<Tooltip.Root>
+										<Tooltip.Trigger>
+											{#snippet child({ props })}
+												<button
+													{...props}
+													type="button"
+													class="grid size-6 shrink-0 cursor-pointer place-items-center"
+													onclick={() => removeTaskFile(attachment.id)}
+												>
+													<HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+													<span class="sr-only">Excluir arquivo</span>
+												</button>
+											{/snippet}
+										</Tooltip.Trigger>
+										<Tooltip.Content>Excluir arquivo</Tooltip.Content>
+									</Tooltip.Root>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+				</div>
 			{/if}
-		</div>
+		{/if}
 
 		<AlertDialog.Footer>
 			{#if editing}
-				<button type="button" class="btn-secondary" onclick={handleDiscard}>Descartar</button>
+				<button type="button" class="btn-secondary" onclick={handleDiscard}>
+					{isCreating ? 'Cancelar' : 'Descartar'}
+				</button>
 				<button type="button" class="btn-primary" onclick={handleSave} disabled={saving}>
-					{saving ? 'Salvando…' : 'Salvar'}
+					{#if isCreating}
+						{saving ? 'Criando…' : 'Criar tarefa'}
+					{:else}
+						{saving ? 'Salvando…' : 'Salvar'}
+					{/if}
 				</button>
 			{:else}
 				<button type="button" class="btn-secondary" onclick={handleCancelTask}
@@ -636,4 +720,6 @@
 	</AlertDialog.Content>
 </AlertDialog.Root>
 
-<TaskExecutionsDrawer bind:open={executionsOpen} taskId={task.id} taskTitle={task.title} />
+{#if task}
+	<TaskExecutionsDrawer bind:open={executionsOpen} taskId={task.id} taskTitle={task.title} />
+{/if}

@@ -18,7 +18,7 @@
 	import ListView from '$lib/components/calendar/list-view.svelte';
 	import ProjectRoadmapGantt from '$lib/components/calendar/project-roadmap-gantt.svelte';
 	import EventDetailDialog from '$lib/components/calendar/event-detail-dialog.svelte';
-	import CreateTaskSheet from '$lib/components/tasks/create-task-sheet.svelte';
+	import TaskDetailsDialog from '$lib/components/tasks/task-details-dialog.svelte';
 	import RecurrenceSheet from '$lib/components/recurrence/recurrence-sheet.svelte';
 	import {
 		addMonths,
@@ -370,10 +370,10 @@
 	<EventDetailDialog bind:event={selectedEvent} />
 
 	{#if data.projects.length > 0}
-		<CreateTaskSheet
+		<TaskDetailsDialog
+			task={null}
 			projects={data.projects}
 			groupMembers={data.groupMembers}
-			showTrigger={false}
 			initialDueDate={taskDueDate}
 			bind:open={taskSheetOpen}
 		/>
