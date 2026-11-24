@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Trash2 } from '@lucide/svelte';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import { Switch } from '$lib/components/ui/switch/index.js';
 	import {
 		createProjectVersion,
@@ -105,9 +106,9 @@
 <div class="flex flex-col gap-sm border border-frame p-sm">
 	<div class="flex items-center justify-between gap-sm">
 		<p class="font-sans text-ui-label uppercase">Versões</p>
-		<button type="button" class="btn-secondary min-h-11" disabled={creating} onclick={addVersion}>
+		<Button type="button" class="min-h-11" disabled={creating} onclick={addVersion}>
 			{creating ? 'Criando…' : 'Nova versão'}
-		</button>
+		</Button>
 	</div>
 
 	{#each versions as version (version.id)}
@@ -175,24 +176,25 @@
 				</div>
 
 				<div class="flex items-stretch gap-sm">
-					<button
+					<Button
 						type="button"
-						class="btn-primary min-h-11 flex-1"
+						class="min-h-11 flex-1"
 						disabled={savingId === version.id || deletingId === version.id}
 						onclick={() => saveVersion(version.id)}
 					>
 						{savingId === version.id ? 'Salvando…' : `Salvar ${version.label}`}
-					</button>
+					</Button>
 					{#if canDelete}
-						<button
+						<Button
 							type="button"
-							class="btn-secondary grid min-h-11 min-w-11 place-items-center px-sm text-destructive"
+							size="icon"
+							class="min-h-11 min-w-11 text-destructive"
 							disabled={deletingId === version.id || savingId === version.id}
 							onclick={() => removeVersion(version.id)}
 							aria-label={deletingId === version.id ? 'Excluindo…' : `Excluir ${version.label}`}
 						>
 							<Trash2 class="size-4" aria-hidden="true" />
-						</button>
+						</Button>
 					{/if}
 				</div>
 			</div>
