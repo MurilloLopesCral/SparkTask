@@ -1,10 +1,12 @@
 <script lang="ts">
+	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import {
 		activeProjectsPerMonth,
 		buildMonthColumns,
 		monthHeatRatio,
 		peakActiveMonth,
 		phaseBarPlacement,
+		phaseHoverTitle,
 		phasesForProject,
 		projectHasRoadmapDates,
 		type RoadmapProject
@@ -114,16 +116,26 @@
 								{@const place = phaseBarPlacement(phase, columns)}
 								<div class="relative h-[1.15rem]">
 									{#if place}
-										<div
-											class={[
-												'absolute inset-y-0 flex items-center overflow-hidden px-1 font-sans text-[0.65rem] uppercase tracking-wide',
-												phase.barClass
-											]}
-											style={barStyle(place.startCol, place.span)}
-											title={`${phase.label}: ${phase.start ?? '—'} → ${phase.end ?? '—'}`}
-										>
-											<span class="truncate">{phase.shortLabel}</span>
-										</div>
+										<Tooltip.Root>
+											<Tooltip.Trigger>
+												{#snippet child({ props })}
+													<button
+														{...props}
+														type="button"
+														class={[
+															'absolute inset-y-0 flex items-center overflow-hidden px-1 text-left font-sans text-[0.65rem] uppercase tracking-wide',
+															phase.barClass
+														]}
+														style={barStyle(place.startCol, place.span)}
+													>
+														<span class="truncate">{phase.shortLabel}</span>
+													</button>
+												{/snippet}
+											</Tooltip.Trigger>
+											<Tooltip.Content>
+												{phaseHoverTitle(phase, project.projectName)}
+											</Tooltip.Content>
+										</Tooltip.Root>
 									{/if}
 								</div>
 							{/each}

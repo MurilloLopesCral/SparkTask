@@ -6,6 +6,8 @@ export type ProjectPhase = {
 	key: ProjectPhaseKey;
 	label: string;
 	shortLabel: string;
+	/** Noun used in hover tooltips, e.g. "Implementação". */
+	hoverLabel: string;
 	/** Tailwind tint classes for the bar. */
 	barClass: string;
 	start: string | null;
@@ -17,6 +19,8 @@ export type RoadmapProject = {
 	id: string;
 	projectId: string;
 	name: string;
+	/** Project name without version suffix — for tooltips. */
+	projectName: string;
 	groupId: string;
 	plexusProjectId: string | null;
 	implementationStart: string | null;
@@ -42,6 +46,7 @@ export function phasesForProject(project: RoadmapProject): ProjectPhase[] {
 			key: 'implementation',
 			label: 'Implementação',
 			shortLabel: 'Impl.',
+			hoverLabel: 'Implementação',
 			barClass: 'bg-tint-sky text-ink',
 			start: project.implementationStart,
 			end: project.implementationEnd
@@ -50,6 +55,7 @@ export function phasesForProject(project: RoadmapProject): ProjectPhase[] {
 			key: 'assistedOps',
 			label: 'QO — Operação assistida',
 			shortLabel: 'QO',
+			hoverLabel: 'Monitoramento',
 			barClass: 'bg-tint-peach text-ink',
 			start: project.assistedOpsStart,
 			end: project.assistedOpsEnd
@@ -58,11 +64,16 @@ export function phasesForProject(project: RoadmapProject): ProjectPhase[] {
 			key: 'performance',
 			label: 'QP — Desempenho',
 			shortLabel: 'QP',
+			hoverLabel: 'Desempenho',
 			barClass: 'bg-tint-sage text-ink',
 			start: project.performanceStart,
 			end: project.performanceEnd
 		}
 	];
+}
+
+export function phaseHoverTitle(phase: ProjectPhase, projectName: string) {
+	return `${phase.hoverLabel} do projeto ${projectName}`;
 }
 
 function parseYm(ymd: string): { year: number; month: number } | null {

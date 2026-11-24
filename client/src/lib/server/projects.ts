@@ -238,6 +238,7 @@ export async function getRoadmapProjects(userId: string) {
 			id: v.id,
 			projectId: p.id,
 			name: `${p.name} · ${v.label}`,
+			projectName: p.name,
 			groupId: p.groupId,
 			plexusProjectId: p.plexusProjectId,
 			implementationStart: v.implementationStart,
