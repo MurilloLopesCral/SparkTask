@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import { versionUpdateSchema } from '$lib/projects/schemas';
 import {
+	deleteProjectVersion,
 	updateProjectVersion,
 	userCanAccessProject,
 	versionBelongsToProject
@@ -23,5 +24,17 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 	}
 
 	await updateProjectVersion(params.versionId, parsed.data);
+	return json({ success: true });
+};
+
+export const DELETE: RequestHandler = async ({ params, locals }) => {
+	if (!locals.user) error(401, 'Não autenticado.');
+	if (!(await userCanAccessProject(locals.user.id, params.id)))
+		error(403, 'Sem acesso a este projeto.');
+	if (!(await versionBelongsToProject(params.versionId, params.id)))
+		error(404, 'Versão não encontrada.');
+
+	const result = await deleteProjectVersion(params.id, params.versionId);
+	if (!result.ok) return json({ message: result.message }, { status: 400 });
 	return json({ success: true });
 };

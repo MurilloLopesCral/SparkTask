@@ -34,15 +34,19 @@ export const versionPhaseSchema = z.object({
 /** Create project: plexus + V1 phase dates in one shot. */
 export const projectLifecycleSchema = projectPlexusSchema.merge(versionPhaseSchema);
 
-export const versionUpdateSchema = versionPhaseSchema.extend({
-	plexusSyncEnabled: z.boolean().optional(),
-	label: z.string().min(1).max(32).optional(),
-	description: z
-		.union([z.string().max(4000), z.literal(''), z.null()])
+const optionalText = (max: number) =>
+	z
+		.union([z.string().max(max), z.literal(''), z.null()])
 		.optional()
 		.transform((value) => {
 			if (value === undefined) return undefined;
 			if (value === null || value === '') return null;
 			return value.trim() || null;
-		})
+		});
+
+export const versionUpdateSchema = versionPhaseSchema.extend({
+	plexusSyncEnabled: z.boolean().optional(),
+	label: z.string().min(1).max(32).optional(),
+	title: optionalText(255),
+	description: optionalText(4000)
 });

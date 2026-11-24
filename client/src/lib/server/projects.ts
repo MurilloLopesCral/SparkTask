@@ -1,6 +1,6 @@
-﻿import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+﻿import { and, asc, count, eq, inArray, sql } from 'drizzle-orm';
 import { db } from './db';
-import { groupMember, project, projectVersion } from './db/schema';
+import { groupMember, project, projectVersion, task } from './db/schema';
 
 export async function getVisibleProjects(userId: string) {
 	const memberships = await db
@@ -148,6 +148,7 @@ export async function versionBelongsToProject(versionId: string, projectId: stri
 
 export interface CreateVersionInput extends VersionPhaseFields {
 	projectId: string;
+	title?: string | null;
 	plexusSyncEnabled?: boolean;
 }
 
@@ -164,6 +165,7 @@ export async function createProjectVersion(input: CreateVersionInput) {
 		.values({
 			projectId: input.projectId,
 			label: `V${next}`,
+			title: input.title ?? null,
 			sortOrder: next,
 			plexusSyncEnabled: input.plexusSyncEnabled ?? true,
 			implementationStart: input.implementationStart,
@@ -180,6 +182,7 @@ export async function createProjectVersion(input: CreateVersionInput) {
 export interface VersionUpdateFields extends VersionPhaseFields {
 	plexusSyncEnabled?: boolean;
 	label?: string;
+	title?: string | null;
 	description?: string | null;
 }
 
@@ -188,6 +191,34 @@ export async function updateProjectVersion(versionId: string, fields: VersionUpd
 		.update(projectVersion)
 		.set({ ...fields, updatedAt: new Date() })
 		.where(eq(projectVersion.id, versionId));
+}
+
+/**
+ * Deletes a version only when it is not the project's last one and has no tasks.
+ * FK is ON DELETE restrict — we gate explicitly for a clear PT-BR error.
+ */
+export async function deleteProjectVersion(projectId: string, versionId: string) {
+	const [versionCount] = await db
+		.select({ n: count() })
+		.from(projectVersion)
+		.where(eq(projectVersion.projectId, projectId));
+	if (Number(versionCount?.n ?? 0) <= 1) {
+		return { ok: false as const, message: 'O projeto precisa manter ao menos uma versão.' };
+	}
+
+	const [taskCount] = await db
+		.select({ n: count() })
+		.from(task)
+		.where(eq(task.projectVersionId, versionId));
+	if (Number(taskCount?.n ?? 0) > 0) {
+		return {
+			ok: false as const,
+			message: 'Mova ou exclua as tarefas desta versão antes de removê-la.'
+		};
+	}
+
+	await db.delete(projectVersion).where(eq(projectVersion.id, versionId));
+	return { ok: true as const };
 }
 
 export async function getProjectsForGroup(userId: string, groupId: string) {
@@ -234,19 +265,24 @@ export async function getRoadmapProjects(userId: string) {
 	});
 
 	return projects.flatMap((p) =>
-		p.versions.map((v) => ({
-			id: v.id,
-			projectId: p.id,
-			name: `${p.name} · ${v.label}`,
-			projectName: p.name,
-			groupId: p.groupId,
-			plexusProjectId: p.plexusProjectId,
-			implementationStart: v.implementationStart,
-			implementationEnd: v.implementationEnd,
-			assistedOpsStart: v.assistedOpsStart,
-			assistedOpsEnd: v.assistedOpsEnd,
-			performanceStart: v.performanceStart,
-			performanceEnd: v.performanceEnd
-		}))
+		p.versions.map((v) => {
+			const title = v.title?.trim();
+			return {
+				id: v.id,
+				projectId: p.id,
+				name: title
+					? `${v.label} · ${p.name} · ${title}`
+					: `${v.label} · ${p.name}`,
+				projectName: p.name,
+				groupId: p.groupId,
+				plexusProjectId: p.plexusProjectId,
+				implementationStart: v.implementationStart,
+				implementationEnd: v.implementationEnd,
+				assistedOpsStart: v.assistedOpsStart,
+				assistedOpsEnd: v.assistedOpsEnd,
+				performanceStart: v.performanceStart,
+				performanceEnd: v.performanceEnd
+			};
+		})
 	);
 }

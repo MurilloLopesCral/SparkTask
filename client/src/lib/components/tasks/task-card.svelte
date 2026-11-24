@@ -116,6 +116,17 @@
 				<Badge variant="outline" class="badge-sticker w-fit max-w-full truncate"
 					>{task.project.name}</Badge
 				>
+				{#if task.version}
+					<Badge
+						variant="secondary"
+						class="badge-sticker w-fit max-w-[8rem] truncate"
+						title={task.version.title
+							? `${task.version.label} · ${task.version.title}`
+							: task.version.label}
+					>
+						{task.version.label}
+					</Badge>
+				{/if}
 			</div>
 			<KindBadge kind={task.kind} />
 		</div>

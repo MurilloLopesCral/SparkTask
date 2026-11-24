@@ -85,6 +85,7 @@ export async function updateProjectVersion(
 	projectId: string,
 	versionId: string,
 	fields: {
+		title?: string | null;
 		description?: string | null;
 		implementationStart?: string | null;
 		implementationEnd?: string | null;
@@ -107,6 +108,20 @@ export async function updateProjectVersion(
 		return false;
 	}
 	toast.success('Versão atualizada.');
+	return true;
+}
+
+export async function deleteProjectVersion(projectId: string, versionId: string) {
+	const res = await fetch(`/api/projects/${projectId}/versions/${versionId}`, {
+		method: 'DELETE'
+	});
+	await invalidateAll();
+	const data = await res.json().catch(() => ({}));
+	if (!res.ok) {
+		toast.error(data.message ?? 'Não foi possível excluir a versão.');
+		return false;
+	}
+	toast.success('Versão excluída.');
 	return true;
 }
 

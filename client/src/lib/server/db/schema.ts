@@ -268,6 +268,8 @@ export const projectVersion = pgTable(
 			.references(() => project.id, { onDelete: 'cascade' }),
 		/** Display label, e.g. V1 / V2. */
 		label: varchar('label', { length: 32 }).notNull(),
+		/** Short human title for the release (shown on calendar / badges). */
+		title: varchar('title', { length: 255 }),
 		description: text('description'),
 		sortOrder: integer('sort_order').notNull().default(1),
 		/** When false, tasks in this version do not sync gantts to Plexus. */

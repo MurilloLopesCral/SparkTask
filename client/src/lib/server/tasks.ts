@@ -68,7 +68,7 @@ export async function getVisibleTasks(userId: string, filters: TaskFilters = {})
 		orderBy: [desc(task.createdAt)],
 		with: {
 			project: true,
-			version: { columns: { id: true, label: true, sortOrder: true } },
+			version: { columns: { id: true, label: true, title: true, sortOrder: true } },
 			owner: true,
 			creator: true,
 			files: { with: { uploader: true }, orderBy: (file, { desc }) => [desc(file.createdAt)] },
