@@ -43,14 +43,8 @@
 		isImageAttachment,
 		type FileUploadConfig
 	} from '$lib/tasks/files-api';
+	import type { TaskProjectOption } from '$lib/tasks/project-option';
 	import type { VisibleTask } from '$lib/server/tasks';
-
-	type ProjectOption = {
-		id: string;
-		name: string;
-		groupId: string;
-		versions: { id: string; label: string; sortOrder: number }[];
-	};
 
 	let {
 		task,
@@ -61,7 +55,7 @@
 		initialEditing = false
 	}: {
 		task: VisibleTask;
-		projects: ProjectOption[];
+		projects: TaskProjectOption[];
 		groupMembers: { groupId: string; id: string; name: string | null; email: string }[];
 		fileUploadConfig: FileUploadConfig;
 		open?: boolean;

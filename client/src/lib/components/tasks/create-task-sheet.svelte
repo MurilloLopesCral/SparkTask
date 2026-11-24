@@ -14,14 +14,8 @@
 	} from '$lib/tasks/constants';
 	import { createTask } from '$lib/tasks/api';
 	import { handleMarkdownTextareaKeydown } from '$lib/tasks/markdown-editor';
+	import type { TaskProjectOption } from '$lib/tasks/project-option';
 	import MarkdownToolbar from './markdown-toolbar.svelte';
-
-	type ProjectOption = {
-		id: string;
-		name: string;
-		groupId: string;
-		versions: { id: string; label: string; sortOrder: number }[];
-	};
 
 	let {
 		projects,
@@ -31,7 +25,7 @@
 		initialDueDate = '',
 		initialProjectId = ''
 	}: {
-		projects: ProjectOption[];
+		projects: TaskProjectOption[];
 		groupMembers: { groupId: string; id: string; name: string | null; email: string }[];
 		open?: boolean;
 		showTrigger?: boolean;

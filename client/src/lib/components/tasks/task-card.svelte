@@ -30,6 +30,7 @@
 		startTaskExecution
 	} from '$lib/tasks/execution-api';
 	import type { FileUploadConfig } from '$lib/tasks/files-api';
+	import type { TaskProjectOption } from '$lib/tasks/project-option';
 	import type { VisibleTask } from '$lib/server/tasks';
 
 	let {
@@ -42,7 +43,7 @@
 		draggable = false
 	}: {
 		task: VisibleTask;
-		projects: { id: string; name: string; groupId: string }[];
+		projects: TaskProjectOption[];
 		groupMembers: { groupId: string; id: string; name: string | null; email: string }[];
 		fileUploadConfig: FileUploadConfig;
 		ondragstart?: (taskId: string) => void;

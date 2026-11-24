@@ -5,6 +5,7 @@
 	import { TASK_STATUSES, type TaskStatus } from '$lib/tasks/constants';
 	import { setTaskStatus } from '$lib/tasks/api';
 	import type { FileUploadConfig } from '$lib/tasks/files-api';
+	import type { TaskProjectOption } from '$lib/tasks/project-option';
 	import type { VisibleTask } from '$lib/server/tasks';
 
 	let {
@@ -14,7 +15,7 @@
 		fileUploadConfig
 	}: {
 		tasks: VisibleTask[];
-		projects: { id: string; name: string; groupId: string }[];
+		projects: TaskProjectOption[];
 		groupMembers: { groupId: string; id: string; name: string | null; email: string }[];
 		fileUploadConfig: FileUploadConfig;
 	} = $props();

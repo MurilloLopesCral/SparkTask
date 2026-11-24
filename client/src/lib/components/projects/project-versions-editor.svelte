@@ -20,21 +20,28 @@
 
 	let { projectId, versions }: { projectId: string; versions: VersionRow[] } = $props();
 
-	let drafts = $state<
-		Record<string, VersionPhaseForm & { description: string; plexusSyncEnabled: boolean }>
-	>({});
+	type VersionDraft = VersionPhaseForm & { description: string; plexusSyncEnabled: boolean };
+
+	let drafts = $state<Record<string, VersionDraft>>({});
+	let seededIds = $state('');
 	let savingId = $state<string | null>(null);
 	let creating = $state(false);
 
+	function draftFromVersion(v: VersionRow): VersionDraft {
+		return {
+			...phasesFromVersion(v),
+			description: v.description ?? '',
+			plexusSyncEnabled: v.plexusSyncEnabled
+		};
+	}
+
+	// Reseed only when versions are added/removed — invalidateAll must not wipe edits.
 	$effect(() => {
-		const next: typeof drafts = {};
-		for (const v of versions) {
-			next[v.id] = {
-				...phasesFromVersion(v),
-				description: v.description ?? '',
-				plexusSyncEnabled: v.plexusSyncEnabled
-			};
-		}
+		const ids = versions.map((v) => v.id).join(',');
+		if (ids === seededIds) return;
+		seededIds = ids;
+		const next: Record<string, VersionDraft> = {};
+		for (const v of versions) next[v.id] = draftFromVersion(v);
 		drafts = next;
 	});
 

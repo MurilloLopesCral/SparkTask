@@ -66,20 +66,6 @@ export function phasesFromVersion(version: {
 	};
 }
 
-/** @deprecated Prefer plexusFromProject + phasesFromVersion. Kept for create sheet. */
-export function lifecycleFromProject(project: {
-	plexusProjectId?: string | null;
-	plexusTopicCode?: string | null;
-	implementationStart?: string | null;
-	implementationEnd?: string | null;
-	assistedOpsStart?: string | null;
-	assistedOpsEnd?: string | null;
-	performanceStart?: string | null;
-	performanceEnd?: string | null;
-}): ProjectLifecycleForm {
-	return { ...plexusFromProject(project), ...phasesFromVersion(project) };
-}
-
 const emptyToNull = (value: string) => (value.trim() ? value.trim() : null);
 
 export function plexusPayload(form: ProjectPlexusForm) {
