@@ -62,14 +62,15 @@
 				<ContextMenu.Trigger
 					class={[
 						'flex min-h-20 flex-col gap-1 border-b border-r border-frame p-1 text-left last:border-r-0 sm:min-h-28 sm:p-xs',
-						!inMonth && 'bg-muted/40 text-muted-foreground',
+						!inMonth && !isToday && 'bg-muted/40 text-muted-foreground',
+						isToday && 'bg-muted',
 						'transition-colors duration-150 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring'
 					]}
 				>
 					<div
 						class={[
 							'mb-0.5 flex size-6 items-center justify-center font-sans text-caption tabular-nums sm:size-7 sm:text-body',
-							isToday && 'bg-frame font-semibold text-canvas'
+							isToday && 'font-semibold'
 						]}
 						aria-current={isToday ? 'date' : undefined}
 					>

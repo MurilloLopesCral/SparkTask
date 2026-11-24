@@ -47,15 +47,14 @@
 			{@const isToday = isSameDay(day, today)}
 			<ContextMenu.Root>
 				<ContextMenu.Trigger
-					class="flex min-h-64 flex-col border-r border-frame text-left last:border-r-0 transition-colors duration-150 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+					class={[
+						'flex min-h-64 flex-col border-r border-frame text-left last:border-r-0 transition-colors duration-150 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
+						isToday && 'bg-muted'
+					]}
 					aria-label={`${WEEKDAY_LABELS_SHORT[i]}, ${formatDayShort(day)}`}
+					aria-current={isToday ? 'date' : undefined}
 				>
-					<header
-						class={[
-							'border-b border-frame px-xs py-sm text-center',
-							isToday && 'bg-frame text-canvas'
-						]}
-					>
+					<header class="border-b border-frame px-xs py-sm text-center">
 						<div class="font-sans text-ui-label uppercase">{WEEKDAY_LABELS_SHORT[i]}</div>
 						<div class="font-serif text-caption tabular-nums">{formatDayShort(day)}</div>
 					</header>

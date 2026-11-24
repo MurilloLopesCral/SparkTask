@@ -35,6 +35,8 @@
 	const peak = $derived(peakActiveMonth(activeCounts, columns));
 	const peakCount = $derived(peak?.count ?? 0);
 	const monthCount = $derived(columns.length);
+	const now = new Date();
+	const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
 	function barStyle(startCol: number, span: number) {
 		const left = ((startCol - 1) / monthCount) * 100;
@@ -76,8 +78,12 @@
 				<div class="flex min-w-0 flex-1">
 					{#each columns as col (col.key)}
 						<div
-							class="flex flex-1 items-center justify-center border-r border-frame px-xxs py-xs last:border-r-0"
+							class={[
+								'flex flex-1 items-center justify-center border-r border-frame px-xxs py-xs last:border-r-0',
+								col.key === currentMonthKey && 'bg-muted'
+							]}
 							style:min-width="3.25rem"
+							aria-current={col.key === currentMonthKey ? 'date' : undefined}
 						>
 							<span class="font-sans text-[0.65rem] uppercase leading-tight tabular-nums">
 								{col.label}
@@ -105,7 +111,10 @@
 						<div class="pointer-events-none absolute inset-0 flex" aria-hidden="true">
 							{#each columns as col (col.key)}
 								<div
-									class="flex-1 border-r border-frame/40 last:border-r-0"
+									class={[
+										'flex-1 border-r border-frame/40 last:border-r-0',
+										col.key === currentMonthKey && 'bg-muted'
+									]}
 									style:min-width="3.25rem"
 								></div>
 							{/each}
@@ -154,7 +163,10 @@
 					{#each columns as col, i (col.key)}
 						{@const count = activeCounts[i]}
 						<div
-							class="flex flex-1 items-center justify-center border-r border-frame px-xxs py-sm last:border-r-0"
+							class={[
+								'flex flex-1 items-center justify-center border-r border-frame px-xxs py-sm last:border-r-0',
+								col.key === currentMonthKey && count === 0 && 'bg-muted'
+							]}
 							style:min-width="3.25rem"
 							style={heatStyle(count)}
 							title={`${col.label}: ${count} versão(ões) com fase ativa`}
