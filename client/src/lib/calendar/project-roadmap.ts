@@ -72,8 +72,32 @@ export function phasesForProject(project: RoadmapProject): ProjectPhase[] {
 	];
 }
 
+const hoverDateFmt = new Intl.DateTimeFormat('pt-BR', {
+	day: '2-digit',
+	month: 'short',
+	year: 'numeric'
+});
+
+function formatHoverDate(ymd: string | null) {
+	if (!ymd) return null;
+	const [y, m, d] = ymd.split('-').map(Number);
+	if (!y || !m || !d) return ymd;
+	return hoverDateFmt.format(new Date(y, m - 1, d));
+}
+
 export function phaseHoverTitle(phase: ProjectPhase, projectName: string) {
-	return `${phase.hoverLabel} do projeto ${projectName}`;
+	const start = formatHoverDate(phase.start);
+	const end = formatHoverDate(phase.end);
+	const period =
+		start && end
+			? `${start} → ${end}`
+			: start
+				? `a partir de ${start}`
+				: end
+					? `até ${end}`
+					: null;
+	const head = `${phase.hoverLabel} do projeto ${projectName}`;
+	return period ? `${head} · ${period}` : head;
 }
 
 function parseYm(ymd: string): { year: number; month: number } | null {
