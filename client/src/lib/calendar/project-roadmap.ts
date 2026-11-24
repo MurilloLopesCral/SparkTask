@@ -153,7 +153,7 @@ export function phaseBarPlacement(
 	};
 }
 
-/** Count of projects with any phase active in each month column. */
+/** Count of versions with any phase active in each month column. */
 export function activeProjectsPerMonth(projects: RoadmapProject[], columns: MonthColumn[]) {
 	return columns.map((col) => {
 		const idx = monthIndex(col.year, col.month);
@@ -167,6 +167,30 @@ export function activeProjectsPerMonth(projects: RoadmapProject[], columns: Mont
 		}
 		return count;
 	});
+}
+
+/** Peak load across the visible window — for the Gantt footer summary. */
+export function peakActiveMonth(counts: number[], columns: MonthColumn[]) {
+	if (counts.length === 0 || columns.length === 0) return null;
+	let peak = 0;
+	let index = 0;
+	for (let i = 0; i < counts.length; i++) {
+		if (counts[i] > peak) {
+			peak = counts[i];
+			index = i;
+		}
+	}
+	if (peak === 0) return null;
+	return { count: peak, column: columns[index] };
+}
+
+/**
+ * Heat intensity 0–1 for footer cells (0 = idle, 1 = peak of the window).
+ * CSS uses this via color-mix on the peach tint.
+ */
+export function monthHeatRatio(count: number, peak: number) {
+	if (count <= 0 || peak <= 0) return 0;
+	return Math.min(1, count / peak);
 }
 
 export function projectHasRoadmapDates(project: RoadmapProject) {

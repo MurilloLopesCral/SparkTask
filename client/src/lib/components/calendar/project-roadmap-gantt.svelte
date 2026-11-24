@@ -2,6 +2,8 @@
 	import {
 		activeProjectsPerMonth,
 		buildMonthColumns,
+		monthHeatRatio,
+		peakActiveMonth,
 		phaseBarPlacement,
 		phasesForProject,
 		projectHasRoadmapDates,
@@ -28,12 +30,23 @@
 	const undated = $derived(filtered.filter((p) => !projectHasRoadmapDates(p)));
 	const columns = $derived(buildMonthColumns(dated, anchorYear));
 	const activeCounts = $derived(activeProjectsPerMonth(dated, columns));
+	const peak = $derived(peakActiveMonth(activeCounts, columns));
+	const peakCount = $derived(peak?.count ?? 0);
 	const monthCount = $derived(columns.length);
 
 	function barStyle(startCol: number, span: number) {
 		const left = ((startCol - 1) / monthCount) * 100;
 		const width = (span / monthCount) * 100;
 		return `left:${left}%;width:${width}%`;
+	}
+
+	function heatStyle(count: number) {
+		const ratio = monthHeatRatio(count, peakCount);
+		if (ratio === 0) {
+			return 'background-color: color-mix(in oklab, var(--color-muted, #e8e4dc) 55%, transparent)';
+		}
+		const pct = Math.round(28 + ratio * 72);
+		return `background-color: color-mix(in oklab, var(--color-tint-peach, #f0b27a) ${pct}%, transparent)`;
 	}
 </script>
 
@@ -59,17 +72,13 @@
 					Projeto
 				</div>
 				<div class="flex min-w-0 flex-1">
-					{#each columns as col, i (col.key)}
+					{#each columns as col (col.key)}
 						<div
-							class="flex flex-1 flex-col items-center justify-center border-r border-frame px-xxs py-xs last:border-r-0"
+							class="flex flex-1 items-center justify-center border-r border-frame px-xxs py-xs last:border-r-0"
 							style:min-width="3.25rem"
-							title={`${col.label}: ${activeCounts[i]} projeto(s) ativos`}
 						>
 							<span class="font-sans text-[0.65rem] uppercase leading-tight tabular-nums">
 								{col.label}
-							</span>
-							<span class="font-serif text-caption tabular-nums text-muted-foreground">
-								{activeCounts[i]}
 							</span>
 						</div>
 					{/each}
@@ -78,7 +87,7 @@
 
 			{#each dated as project (project.id)}
 				{@const phases = phasesForProject(project)}
-				<div class="flex border-b border-frame last:border-b-0">
+				<div class="flex border-b border-frame">
 					<div
 						class="flex w-[13rem] shrink-0 flex-col justify-center gap-xxs border-r border-frame px-sm py-sm"
 					>
@@ -93,7 +102,10 @@
 					<div class="relative min-h-[5rem] min-w-0 flex-1 py-sm">
 						<div class="pointer-events-none absolute inset-0 flex" aria-hidden="true">
 							{#each columns as col (col.key)}
-								<div class="flex-1 border-r border-frame/40 last:border-r-0" style:min-width="3.25rem"></div>
+								<div
+									class="flex-1 border-r border-frame/40 last:border-r-0"
+									style:min-width="3.25rem"
+								></div>
 							{/each}
 						</div>
 
@@ -119,8 +131,43 @@
 					</div>
 				</div>
 			{/each}
+
+			<div class="flex border-t-2 border-frame bg-canvas">
+				<div
+					class="flex w-[13rem] shrink-0 items-center border-r border-frame px-sm py-sm font-sans text-ui-label uppercase leading-tight"
+				>
+					Ativos no mês
+				</div>
+				<div class="flex min-w-0 flex-1">
+					{#each columns as col, i (col.key)}
+						{@const count = activeCounts[i]}
+						<div
+							class="flex flex-1 items-center justify-center border-r border-frame px-xxs py-sm last:border-r-0"
+							style:min-width="3.25rem"
+							style={heatStyle(count)}
+							title={`${col.label}: ${count} versão(ões) com fase ativa`}
+						>
+							<span
+								class={[
+									'font-sans text-sm tabular-nums',
+									count === peakCount && count > 0 ? 'font-semibold text-ink' : 'text-ink'
+								]}
+							>
+								{count}
+							</span>
+						</div>
+					{/each}
+				</div>
+			</div>
 		</div>
 	</div>
+
+	{#if peak}
+		<p class="mt-sm font-serif text-caption text-muted-foreground">
+			Pico em {peak.column.label}:
+			<span class="text-ink">{peak.count} versão(ões) em paralelo</span>.
+		</p>
+	{/if}
 
 	<div class="mt-md flex flex-wrap items-center gap-md font-serif text-caption text-muted-foreground">
 		<span class="inline-flex items-center gap-1">
