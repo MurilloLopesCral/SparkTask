@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Trash2 } from '@lucide/svelte';
 	import { Switch } from '$lib/components/ui/switch/index.js';
 	import {
 		createProjectVersion,
@@ -105,16 +105,9 @@
 <div class="flex flex-col gap-sm border border-frame p-sm">
 	<div class="flex items-center justify-between gap-sm">
 		<p class="font-sans text-ui-label uppercase">Versões</p>
-		<Button
-			type="button"
-			variant="secondary"
-			size="sm"
-			class="min-h-11"
-			disabled={creating}
-			onclick={addVersion}
-		>
+		<button type="button" class="btn-secondary min-h-11" disabled={creating} onclick={addVersion}>
 			{creating ? 'Criando…' : 'Nova versão'}
-		</Button>
+		</button>
 	</div>
 
 	{#each versions as version (version.id)}
@@ -181,28 +174,25 @@
 					</label>
 				</div>
 
-				<div class="flex flex-col gap-sm sm:flex-row">
-					<Button
+				<div class="flex items-stretch gap-sm">
+					<button
 						type="button"
-						variant="secondary"
-						size="sm"
-						class="min-h-11 flex-1"
+						class="btn-primary min-h-11 flex-1"
 						disabled={savingId === version.id || deletingId === version.id}
 						onclick={() => saveVersion(version.id)}
 					>
 						{savingId === version.id ? 'Salvando…' : `Salvar ${version.label}`}
-					</Button>
+					</button>
 					{#if canDelete}
-						<Button
+						<button
 							type="button"
-							variant="destructive"
-							size="sm"
-							class="min-h-11"
+							class="btn-secondary grid min-h-11 min-w-11 place-items-center px-sm text-destructive"
 							disabled={deletingId === version.id || savingId === version.id}
 							onclick={() => removeVersion(version.id)}
+							aria-label={deletingId === version.id ? 'Excluindo…' : `Excluir ${version.label}`}
 						>
-							{deletingId === version.id ? 'Excluindo…' : 'Excluir'}
-						</Button>
+							<Trash2 class="size-4" aria-hidden="true" />
+						</button>
 					{/if}
 				</div>
 			</div>
