@@ -16,30 +16,49 @@
 	import { handleMarkdownTextareaKeydown } from '$lib/tasks/markdown-editor';
 	import MarkdownToolbar from './markdown-toolbar.svelte';
 
+	type ProjectOption = {
+		id: string;
+		name: string;
+		groupId: string;
+		versions: { id: string; label: string; sortOrder: number }[];
+	};
+
 	let {
 		projects,
 		groupMembers,
 		open = $bindable(false),
 		showTrigger = true,
-		initialDueDate = ''
+		initialDueDate = '',
+		initialProjectId = ''
 	}: {
-		projects: { id: string; name: string; groupId: string }[];
+		projects: ProjectOption[];
 		groupMembers: { groupId: string; id: string; name: string | null; email: string }[];
 		open?: boolean;
 		showTrigger?: boolean;
 		/** Prefill prazo when creating from the calendar. */
 		initialDueDate?: string;
+		/** Prefill projeto (e.g. active filter on /tasks). */
+		initialProjectId?: string;
 	} = $props();
 
 	let submitting = $state(false);
 	let form = $state(emptyForm());
 	let descriptionEl = $state<HTMLTextAreaElement | null>(null);
 
+	function defaultVersionId(projectId: string) {
+		return projects.find((p) => p.id === projectId)?.versions[0]?.id ?? '';
+	}
+
 	function emptyForm(dueDate = '') {
+		const projectId =
+			(initialProjectId && projects.some((p) => p.id === initialProjectId)
+				? initialProjectId
+				: projects[0]?.id) ?? '';
 		return {
 			title: '',
 			description: '',
-			projectId: projects[0]?.id ?? '',
+			projectId,
+			projectVersionId: defaultVersionId(projectId),
 			priority: 'medium',
 			type: 'mandatory',
 			kind: 'improvement',
@@ -49,6 +68,7 @@
 	}
 
 	const selectedProject = $derived(projects.find((p) => p.id === form.projectId));
+	const availableVersions = $derived(selectedProject?.versions ?? []);
 	const availableOwners = $derived(
 		groupMembers.filter((m) => m.groupId === selectedProject?.groupId)
 	);
@@ -59,9 +79,18 @@
 		}
 	});
 
+	$effect(() => {
+		if (
+			form.projectVersionId &&
+			!availableVersions.some((v) => v.id === form.projectVersionId)
+		) {
+			form.projectVersionId = availableVersions[0]?.id ?? '';
+		}
+	});
+
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
-		if (!form.title.trim() || !form.projectId) return;
+		if (!form.title.trim() || !form.projectId || !form.projectVersionId) return;
 
 		submitting = true;
 		try {
@@ -130,13 +159,34 @@
 
 				<label class="flex flex-col gap-xxs">
 					<span class="font-sans text-ui-label uppercase">Projeto</span>
-					<Select.Root type="single" bind:value={form.projectId}>
+					<Select.Root
+						type="single"
+						bind:value={form.projectId}
+						onValueChange={(id) => {
+							form.projectVersionId = defaultVersionId(id);
+						}}
+					>
 						<Select.Trigger class="w-full">
 							{projects.find((p) => p.id === form.projectId)?.name ?? 'Selecione um projeto'}
 						</Select.Trigger>
 						<Select.Content>
 							{#each projects as p (p.id)}
 								<Select.Item value={p.id} label={p.name} />
+							{/each}
+						</Select.Content>
+					</Select.Root>
+				</label>
+
+				<label class="flex flex-col gap-xxs">
+					<span class="font-sans text-ui-label uppercase">Versão</span>
+					<Select.Root type="single" bind:value={form.projectVersionId}>
+						<Select.Trigger class="w-full">
+							{availableVersions.find((v) => v.id === form.projectVersionId)?.label ??
+								'Selecione'}
+						</Select.Trigger>
+						<Select.Content>
+							{#each availableVersions as v (v.id)}
+								<Select.Item value={v.id} label={v.label} />
 							{/each}
 						</Select.Content>
 					</Select.Root>
@@ -211,7 +261,10 @@
 			</div>
 
 			<Sheet.Footer>
-				<Button type="submit" disabled={submitting || !form.projectId}>
+				<Button
+					type="submit"
+					disabled={submitting || !form.projectId || !form.projectVersionId}
+				>
 					{submitting ? 'Criando…' : 'Criar tarefa'}
 				</Button>
 			</Sheet.Footer>

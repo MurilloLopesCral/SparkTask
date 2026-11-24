@@ -245,15 +245,6 @@ export const project = pgTable(
 		 * sob essa task-pai (`POST /service/v1/ganttitems` com scope + topicCode).
 		 */
 		plexusTopicCode: varchar('plexus_topic_code', { length: 64 }),
-		/** Implementation phase (construção / testes / entrega). */
-		implementationStart: date('implementation_start'),
-		implementationEnd: date('implementation_end'),
-		/** QO — assisted operations (operação assistida). */
-		assistedOpsStart: date('assisted_ops_start'),
-		assistedOpsEnd: date('assisted_ops_end'),
-		/** QP — performance monitoring (desempenho). */
-		performanceStart: date('performance_start'),
-		performanceEnd: date('performance_end'),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 	},
@@ -262,6 +253,35 @@ export const project = pgTable(
 			.on(t.plexusProjectId)
 			.where(sql`${t.plexusProjectId} is not null`)
 	]
+);
+
+/**
+ * Release/version of a project (V1, V2…). Holds roadmap phase dates.
+ * Every project gets a V1 on create; tasks point at a version.
+ */
+export const projectVersion = pgTable(
+	'project_version',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		projectId: uuid('project_id')
+			.notNull()
+			.references(() => project.id, { onDelete: 'cascade' }),
+		/** Display label, e.g. V1 / V2. */
+		label: varchar('label', { length: 32 }).notNull(),
+		description: text('description'),
+		sortOrder: integer('sort_order').notNull().default(1),
+		/** When false, tasks in this version do not sync gantts to Plexus. */
+		plexusSyncEnabled: boolean('plexus_sync_enabled').notNull().default(true),
+		implementationStart: date('implementation_start'),
+		implementationEnd: date('implementation_end'),
+		assistedOpsStart: date('assisted_ops_start'),
+		assistedOpsEnd: date('assisted_ops_end'),
+		performanceStart: date('performance_start'),
+		performanceEnd: date('performance_end'),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [uniqueIndex('project_version_project_label_uidx').on(t.projectId, t.label)]
 );
 
 /**
@@ -311,6 +331,9 @@ export const task = pgTable('task', {
 	projectId: uuid('project_id')
 		.notNull()
 		.references(() => project.id, { onDelete: 'cascade' }),
+	projectVersionId: uuid('project_version_id')
+		.notNull()
+		.references(() => projectVersion.id, { onDelete: 'restrict' }),
 	dueDate: date('due_date'),
 	priority: taskPriorityEnum('priority').notNull(),
 	type: taskTypeEnum('type').notNull(),
@@ -423,8 +446,14 @@ export const groupMemberRelations = relations(groupMember, ({ one }) => ({
 
 export const projectRelations = relations(project, ({ one, many }) => ({
 	group: one(group, { fields: [project.groupId], references: [group.id] }),
+	versions: many(projectVersion),
 	tasks: many(task),
 	recurrences: many(taskRecurrence)
+}));
+
+export const projectVersionRelations = relations(projectVersion, ({ one, many }) => ({
+	project: one(project, { fields: [projectVersion.projectId], references: [project.id] }),
+	tasks: many(task)
 }));
 
 export const taskRecurrenceRelations = relations(taskRecurrence, ({ one, many }) => ({
@@ -444,6 +473,10 @@ export const taskRecurrenceRelations = relations(taskRecurrence, ({ one, many })
 
 export const taskRelations = relations(task, ({ one, many }) => ({
 	project: one(project, { fields: [task.projectId], references: [project.id] }),
+	version: one(projectVersion, {
+		fields: [task.projectVersionId],
+		references: [projectVersion.id]
+	}),
 	owner: one(user, {
 		fields: [task.ownerId],
 		references: [user.id],

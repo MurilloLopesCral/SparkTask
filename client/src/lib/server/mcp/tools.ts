@@ -246,6 +246,7 @@ const listTasksSchema = z.object({
 
 const createTaskSchema = z.object({
 	projectId: z.string().uuid(),
+	projectVersionId: z.string().uuid().optional(),
 	title: z.string().min(1).max(255),
 	description: z.string().max(8000).optional(),
 	priority: z.enum(['low', 'medium', 'high', 'critical']),
@@ -439,10 +440,24 @@ export async function callMcpTool(
 				if (!okOwner) return toolError('ownerId não pertence ao grupo do projeto.');
 			}
 
+			const { getDefaultProjectVersionId, versionBelongsToProject } = await import(
+				'$lib/server/projects'
+			);
+			let projectVersionId = parsed.data.projectVersionId ?? null;
+			if (projectVersionId) {
+				if (!(await versionBelongsToProject(projectVersionId, parsed.data.projectId))) {
+					return toolError('projectVersionId inválido para o projeto.');
+				}
+			} else {
+				projectVersionId = await getDefaultProjectVersionId(parsed.data.projectId);
+			}
+			if (!projectVersionId) return toolError('Projeto sem versão.');
+
 			const created = await createTask({
 				title: parsed.data.title,
 				description: parsed.data.description ?? null,
 				projectId: parsed.data.projectId,
+				projectVersionId,
 				priority: parsed.data.priority,
 				type: parsed.data.type,
 				kind: parsed.data.kind ?? 'improvement',

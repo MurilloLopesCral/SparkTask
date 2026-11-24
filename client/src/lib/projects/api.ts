@@ -1,6 +1,11 @@
 ﻿import { invalidateAll } from '$app/navigation';
 import { toast } from 'svelte-sonner';
-import { lifecyclePayload, type ProjectLifecycleForm } from './lifecycle';
+import {
+	lifecyclePayload,
+	plexusPayload,
+	type ProjectLifecycleForm,
+	type ProjectPlexusForm
+} from './lifecycle';
 
 export interface CreateProjectValues extends ProjectLifecycleForm {
 	name: string;
@@ -34,7 +39,7 @@ export async function createProject(values: CreateProjectValues) {
 	};
 }
 
-export interface ProjectFormValues extends ProjectLifecycleForm {
+export interface ProjectFormValues extends ProjectPlexusForm {
 	name: string;
 	description: string;
 }
@@ -46,7 +51,7 @@ export async function updateProject(projectId: string, values: ProjectFormValues
 		body: JSON.stringify({
 			name: values.name,
 			description: values.description || null,
-			...lifecyclePayload(values)
+			...plexusPayload(values)
 		})
 	});
 	await invalidateAll();
@@ -57,6 +62,51 @@ export async function updateProject(projectId: string, values: ProjectFormValues
 		return false;
 	}
 	toast.success('Projeto atualizado.');
+	return true;
+}
+
+export async function createProjectVersion(projectId: string) {
+	const res = await fetch(`/api/projects/${projectId}/versions`, {
+		method: 'POST',
+		headers: { 'content-type': 'application/json' },
+		body: JSON.stringify({})
+	});
+	await invalidateAll();
+	const data = await res.json().catch(() => ({}));
+	if (!res.ok) {
+		toast.error(data.message ?? 'Não foi possível criar a versão.');
+		return null;
+	}
+	toast.success(`Versão ${data.version?.label ?? ''} criada.`);
+	return data.version as { id: string; label: string };
+}
+
+export async function updateProjectVersion(
+	projectId: string,
+	versionId: string,
+	fields: {
+		description?: string | null;
+		implementationStart?: string | null;
+		implementationEnd?: string | null;
+		assistedOpsStart?: string | null;
+		assistedOpsEnd?: string | null;
+		performanceStart?: string | null;
+		performanceEnd?: string | null;
+		plexusSyncEnabled?: boolean;
+	}
+) {
+	const res = await fetch(`/api/projects/${projectId}/versions/${versionId}`, {
+		method: 'PATCH',
+		headers: { 'content-type': 'application/json' },
+		body: JSON.stringify(fields)
+	});
+	await invalidateAll();
+	const data = await res.json().catch(() => ({}));
+	if (!res.ok) {
+		toast.error(data.message ?? 'Não foi possível salvar a versão.');
+		return false;
+	}
+	toast.success('Versão atualizada.');
 	return true;
 }
 

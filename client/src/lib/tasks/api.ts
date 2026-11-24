@@ -53,6 +53,7 @@ export interface TaskFormValues {
 	dueDate: string;
 	ownerId: string;
 	projectId: string;
+	projectVersionId: string;
 }
 
 export async function saveTask(taskId: string, values: TaskFormValues) {
@@ -65,7 +66,8 @@ export async function saveTask(taskId: string, values: TaskFormValues) {
 		kind: values.kind,
 		dueDate: values.dueDate || null,
 		ownerId: values.ownerId || null,
-		projectId: values.projectId
+		projectId: values.projectId,
+		projectVersionId: values.projectVersionId
 	});
 	if (ok) toast.success('Tarefa atualizada.');
 	return ok;
@@ -80,6 +82,7 @@ export interface CreateTaskValues {
 	title: string;
 	description: string;
 	projectId: string;
+	projectVersionId: string;
 	priority: string;
 	type: string;
 	kind: string;
@@ -95,6 +98,7 @@ export async function createTask(values: CreateTaskValues) {
 			title: values.title,
 			description: values.description || undefined,
 			projectId: values.projectId,
+			projectVersionId: values.projectVersionId,
 			priority: values.priority,
 			type: values.type,
 			kind: values.kind,

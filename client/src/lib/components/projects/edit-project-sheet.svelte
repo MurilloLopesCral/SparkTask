@@ -8,10 +8,11 @@
 		updateProject,
 		uploadProjectImage
 	} from '$lib/projects/api';
-	import { lifecycleFromProject } from '$lib/projects/lifecycle';
+	import { plexusFromProject } from '$lib/projects/lifecycle';
 	import type { VisibleProject } from '$lib/server/projects';
 	import ProjectImageField from './project-image-field.svelte';
 	import ProjectLifecycleFields from './project-lifecycle-fields.svelte';
+	import ProjectVersionsEditor from './project-versions-editor.svelte';
 
 	let {
 		project,
@@ -40,7 +41,7 @@
 		return {
 			name: p.name,
 			description: p.description ?? '',
-			...lifecycleFromProject(p)
+			...plexusFromProject(p)
 		};
 	}
 
@@ -141,7 +142,9 @@
 					></textarea>
 				</label>
 
-				<ProjectLifecycleFields bind:form />
+				<ProjectLifecycleFields bind:form showPhases={false} />
+
+				<ProjectVersionsEditor projectId={project.id} versions={project.versions} />
 
 				{#if canSyncPlexus}
 					<div class="flex flex-col gap-sm border border-frame p-sm">

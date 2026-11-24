@@ -68,6 +68,7 @@ export async function getVisibleTasks(userId: string, filters: TaskFilters = {})
 		orderBy: [desc(task.createdAt)],
 		with: {
 			project: true,
+			version: { columns: { id: true, label: true, sortOrder: true } },
 			owner: true,
 			creator: true,
 			files: { with: { uploader: true }, orderBy: (file, { desc }) => [desc(file.createdAt)] },
@@ -96,7 +97,13 @@ export async function getVisibleProjects(userId: string) {
 
 	return db.query.project.findMany({
 		where: inArray(project.id, projectIds),
-		columns: { id: true, name: true, groupId: true }
+		columns: { id: true, name: true, groupId: true },
+		with: {
+			versions: {
+				columns: { id: true, label: true, sortOrder: true },
+				orderBy: (v, { asc }) => [asc(v.sortOrder)]
+			}
+		}
 	});
 }
 
@@ -182,6 +189,7 @@ export interface CreateTaskInput {
 	title: string;
 	description: string | null;
 	projectId: string;
+	projectVersionId: string;
 	priority: (typeof taskPriorityEnum.enumValues)[number];
 	type: (typeof taskTypeEnum.enumValues)[number];
 	kind: (typeof taskKindEnum.enumValues)[number];
@@ -207,6 +215,7 @@ export interface TaskUpdateFields {
 	dueDate?: string | null;
 	ownerId?: string | null;
 	projectId?: string;
+	projectVersionId?: string;
 }
 
 export async function updateTaskFields(taskId: string, fields: TaskUpdateFields) {

@@ -7,6 +7,7 @@ import {
 	taskTypeEnum
 } from '$lib/server/db/schema';
 import { autoCloseOpenExecutions } from '$lib/server/executions';
+import { versionBelongsToProject } from '$lib/server/projects';
 import {
 	deleteTaskById,
 	getTaskProjectAndOwner,
@@ -27,7 +28,8 @@ const patchTaskSchema = z
 		kind: z.enum(taskKindEnum.enumValues),
 		dueDate: z.string().nullable(),
 		ownerId: z.string().uuid().nullable(),
-		projectId: z.string().uuid()
+		projectId: z.string().uuid(),
+		projectVersionId: z.string().uuid()
 	})
 	.partial();
 
@@ -69,6 +71,16 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 			// Project moved; drop an owner that no longer belongs to the new group.
 			fields.ownerId = null;
 		}
+	}
+
+	if (fields.projectVersionId) {
+		const versionOk = await versionBelongsToProject(fields.projectVersionId, targetProjectId);
+		if (!versionOk) {
+			return json({ message: 'Versão inválida para este projeto.' }, { status: 400 });
+		}
+	} else if (fields.projectId) {
+		// Project changed without version — refuse rather than guess.
+		return json({ message: 'Informe a versão ao trocar de projeto.' }, { status: 400 });
 	}
 
 	await updateTaskFields(params.id, fields);

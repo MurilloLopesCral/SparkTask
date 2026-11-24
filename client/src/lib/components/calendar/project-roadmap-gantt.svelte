@@ -19,7 +19,9 @@
 	} = $props();
 
 	const filtered = $derived(
-		selectedProjectId ? projects.filter((p) => p.id === selectedProjectId) : projects
+		selectedProjectId
+			? projects.filter((p) => p.projectId === selectedProjectId)
+			: projects
 	);
 
 	const dated = $derived(filtered.filter(projectHasRoadmapDates));

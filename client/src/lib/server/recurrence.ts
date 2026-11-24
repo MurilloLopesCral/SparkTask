@@ -250,12 +250,17 @@ async function materializeOne(row: typeof taskRecurrence.$inferSelect, occurrenc
 		days: row.dueOffsetDays
 	});
 
+	const { getDefaultProjectVersionId } = await import('./projects');
+	const projectVersionId = await getDefaultProjectVersionId(row.projectId);
+	if (!projectVersionId) return { created: false };
+
 	const [created] = await db
 		.insert(task)
 		.values({
 			title: row.title,
 			description: row.description,
 			projectId: row.projectId,
+			projectVersionId,
 			dueDate,
 			priority: row.priority,
 			type: row.type,

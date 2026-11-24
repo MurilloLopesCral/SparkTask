@@ -13,7 +13,9 @@ export type ProjectPhase = {
 };
 
 export type RoadmapProject = {
+	/** Version id (one Gantt row per version). */
 	id: string;
+	projectId: string;
 	name: string;
 	groupId: string;
 	plexusProjectId: string | null;

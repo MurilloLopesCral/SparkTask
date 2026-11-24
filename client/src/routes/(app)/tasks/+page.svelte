@@ -561,7 +561,11 @@
 				</Tabs.Root>
 			</div>
 
-			<CreateTaskSheet projects={data.projects} groupMembers={data.groupMembers} />
+			<CreateTaskSheet
+				projects={data.projects}
+				groupMembers={data.groupMembers}
+				initialProjectId={projectFilter === 'all' ? '' : projectFilter}
+			/>
 		</div>
 	</div>
 
@@ -572,7 +576,11 @@
 				<Empty.Description>As tarefas dos seus grupos vão aparecer aqui.</Empty.Description>
 			</Empty.Header>
 			<Empty.Content>
-				<CreateTaskSheet projects={data.projects} groupMembers={data.groupMembers} />
+				<CreateTaskSheet
+					projects={data.projects}
+					groupMembers={data.groupMembers}
+					initialProjectId={projectFilter === 'all' ? '' : projectFilter}
+				/>
 			</Empty.Content>
 		</Empty.Root>
 	{:else if filteredTasks.length === 0}

@@ -128,11 +128,7 @@
 		}
 	}
 
-	const projectOptions = $derived(
-		isProjects
-			? data.roadmapProjects.map((p) => ({ id: p.id, name: p.name }))
-			: data.projects
-	);
+	const projectOptions = $derived(data.projects);
 </script>
 
 <svelte:head><title>Calendário — SparkTask</title></svelte:head>

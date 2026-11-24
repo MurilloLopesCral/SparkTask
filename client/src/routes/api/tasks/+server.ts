@@ -6,6 +6,7 @@ import {
 	taskStatusEnum,
 	taskTypeEnum
 } from '$lib/server/db/schema';
+import { versionBelongsToProject } from '$lib/server/projects';
 import {
 	createTask,
 	getVisibleTasks,
@@ -18,6 +19,7 @@ const createTaskSchema = z.object({
 	title: z.string().min(1).max(255),
 	description: z.string().optional(),
 	projectId: z.string().uuid(),
+	projectVersionId: z.string().uuid(),
 	priority: z.enum(taskPriorityEnum.enumValues),
 	type: z.enum(taskTypeEnum.enumValues),
 	kind: z.enum(taskKindEnum.enumValues),
@@ -73,10 +75,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json({ message: 'O responsável não pertence ao grupo do projeto.' }, { status: 400 });
 	}
 
+	if (!(await versionBelongsToProject(parsed.data.projectVersionId, parsed.data.projectId))) {
+		return json({ message: 'Versão inválida para este projeto.' }, { status: 400 });
+	}
+
 	const created = await createTask({
 		title: parsed.data.title,
 		description: parsed.data.description || null,
 		projectId: parsed.data.projectId,
+		projectVersionId: parsed.data.projectVersionId,
 		priority: parsed.data.priority,
 		type: parsed.data.type,
 		kind: parsed.data.kind,

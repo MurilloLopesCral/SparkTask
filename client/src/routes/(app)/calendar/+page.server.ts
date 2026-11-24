@@ -55,7 +55,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const selectedProjectId =
 		requestedProject &&
 		(scopedProjects.some((p) => p.id === requestedProject) ||
-			scopedRoadmap.some((p) => p.id === requestedProject))
+			scopedRoadmap.some((p) => p.projectId === requestedProject))
 			? requestedProject
 			: undefined;
 

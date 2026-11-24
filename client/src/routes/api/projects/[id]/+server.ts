@@ -1,6 +1,6 @@
 ﻿import { error, json } from '@sveltejs/kit';
 import { z } from 'zod';
-import { projectLifecycleSchema } from '$lib/projects/schemas';
+import { projectPlexusSchema } from '$lib/projects/schemas';
 import { deleteProjectById, updateProjectFields, userCanAccessProject } from '$lib/server/projects';
 import type { RequestHandler } from './$types';
 
@@ -10,10 +10,10 @@ const patchProjectSchema = z
 		description: z.string().nullable(),
 		image: z.string().url().nullable()
 	})
-	.merge(projectLifecycleSchema)
+	.merge(projectPlexusSchema)
 	.partial();
 
-/** PATCH /api/projects/:id — partial update, single endpoint for every editable field. */
+/** PATCH /api/projects/:id — name/description/image/plexus only (phases live on versions). */
 export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 	if (!locals.user) error(401, 'Não autenticado.');
 	if (!(await userCanAccessProject(locals.user.id, params.id)))

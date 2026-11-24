@@ -1,10 +1,13 @@
-/** Shared zod-friendly date helpers for project lifecycle + Plexus linkage. */
+/** Shared zod-friendly helpers for Plexus linkage + version phase dates. */
 
 export const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
-export type ProjectLifecycleForm = {
+export type ProjectPlexusForm = {
 	plexusProjectId: string;
 	plexusTopicCode: string;
+};
+
+export type VersionPhaseForm = {
 	implementationStart: string;
 	implementationEnd: string;
 	assistedOpsStart: string;
@@ -13,10 +16,15 @@ export type ProjectLifecycleForm = {
 	performanceEnd: string;
 };
 
-export function emptyLifecycleForm(): ProjectLifecycleForm {
+/** Create-project form still seeds V1 dates + plexus in one payload. */
+export type ProjectLifecycleForm = ProjectPlexusForm & VersionPhaseForm;
+
+export function emptyPlexusForm(): ProjectPlexusForm {
+	return { plexusProjectId: '', plexusTopicCode: '' };
+}
+
+export function emptyPhaseForm(): VersionPhaseForm {
 	return {
-		plexusProjectId: '',
-		plexusTopicCode: '',
 		implementationStart: '',
 		implementationEnd: '',
 		assistedOpsStart: '',
@@ -26,6 +34,39 @@ export function emptyLifecycleForm(): ProjectLifecycleForm {
 	};
 }
 
+export function emptyLifecycleForm(): ProjectLifecycleForm {
+	return { ...emptyPlexusForm(), ...emptyPhaseForm() };
+}
+
+export function plexusFromProject(project: {
+	plexusProjectId?: string | null;
+	plexusTopicCode?: string | null;
+}): ProjectPlexusForm {
+	return {
+		plexusProjectId: project.plexusProjectId ?? '',
+		plexusTopicCode: project.plexusTopicCode ?? ''
+	};
+}
+
+export function phasesFromVersion(version: {
+	implementationStart?: string | null;
+	implementationEnd?: string | null;
+	assistedOpsStart?: string | null;
+	assistedOpsEnd?: string | null;
+	performanceStart?: string | null;
+	performanceEnd?: string | null;
+}): VersionPhaseForm {
+	return {
+		implementationStart: version.implementationStart ?? '',
+		implementationEnd: version.implementationEnd ?? '',
+		assistedOpsStart: version.assistedOpsStart ?? '',
+		assistedOpsEnd: version.assistedOpsEnd ?? '',
+		performanceStart: version.performanceStart ?? '',
+		performanceEnd: version.performanceEnd ?? ''
+	};
+}
+
+/** @deprecated Prefer plexusFromProject + phasesFromVersion. Kept for create sheet. */
 export function lifecycleFromProject(project: {
 	plexusProjectId?: string | null;
 	plexusTopicCode?: string | null;
@@ -36,24 +77,20 @@ export function lifecycleFromProject(project: {
 	performanceStart?: string | null;
 	performanceEnd?: string | null;
 }): ProjectLifecycleForm {
+	return { ...plexusFromProject(project), ...phasesFromVersion(project) };
+}
+
+const emptyToNull = (value: string) => (value.trim() ? value.trim() : null);
+
+export function plexusPayload(form: ProjectPlexusForm) {
 	return {
-		plexusProjectId: project.plexusProjectId ?? '',
-		plexusTopicCode: project.plexusTopicCode ?? '',
-		implementationStart: project.implementationStart ?? '',
-		implementationEnd: project.implementationEnd ?? '',
-		assistedOpsStart: project.assistedOpsStart ?? '',
-		assistedOpsEnd: project.assistedOpsEnd ?? '',
-		performanceStart: project.performanceStart ?? '',
-		performanceEnd: project.performanceEnd ?? ''
+		plexusProjectId: emptyToNull(form.plexusProjectId),
+		plexusTopicCode: emptyToNull(form.plexusTopicCode)
 	};
 }
 
-/** Empty string → null for API payloads. */
-export function lifecyclePayload(form: ProjectLifecycleForm) {
-	const emptyToNull = (value: string) => (value.trim() ? value.trim() : null);
+export function phasePayload(form: VersionPhaseForm) {
 	return {
-		plexusProjectId: emptyToNull(form.plexusProjectId),
-		plexusTopicCode: emptyToNull(form.plexusTopicCode),
 		implementationStart: emptyToNull(form.implementationStart),
 		implementationEnd: emptyToNull(form.implementationEnd),
 		assistedOpsStart: emptyToNull(form.assistedOpsStart),
@@ -61,4 +98,8 @@ export function lifecyclePayload(form: ProjectLifecycleForm) {
 		performanceStart: emptyToNull(form.performanceStart),
 		performanceEnd: emptyToNull(form.performanceEnd)
 	};
+}
+
+export function lifecyclePayload(form: ProjectLifecycleForm) {
+	return { ...plexusPayload(form), ...phasePayload(form) };
 }

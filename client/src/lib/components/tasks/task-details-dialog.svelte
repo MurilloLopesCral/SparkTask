@@ -45,6 +45,13 @@
 	} from '$lib/tasks/files-api';
 	import type { VisibleTask } from '$lib/server/tasks';
 
+	type ProjectOption = {
+		id: string;
+		name: string;
+		groupId: string;
+		versions: { id: string; label: string; sortOrder: number }[];
+	};
+
 	let {
 		task,
 		projects,
@@ -54,7 +61,7 @@
 		initialEditing = false
 	}: {
 		task: VisibleTask;
-		projects: { id: string; name: string; groupId: string }[];
+		projects: ProjectOption[];
 		groupMembers: { groupId: string; id: string; name: string | null; email: string }[];
 		fileUploadConfig: FileUploadConfig;
 		open?: boolean;
@@ -82,18 +89,30 @@
 			kind: t.kind as string,
 			dueDate: t.dueDate ?? '',
 			ownerId: t.ownerId ?? '',
-			projectId: t.projectId
+			projectId: t.projectId,
+			projectVersionId: t.projectVersionId
 		};
 	}
 
 	const selectedProject = $derived(projects.find((p) => p.id === form.projectId));
+	const availableVersions = $derived(selectedProject?.versions ?? []);
 	const availableOwners = $derived(
 		groupMembers.filter((m) => m.groupId === selectedProject?.groupId)
 	);
+
+	$effect(() => {
+		if (
+			editing &&
+			form.projectVersionId &&
+			!availableVersions.some((v) => v.id === form.projectVersionId)
+		) {
+			form.projectVersionId = availableVersions[0]?.id ?? '';
+		}
+	});
 	const projectLabel = $derived(
 		editing
 			? (selectedProject?.name ?? task.project.name)
-			: task.project.name
+			: `${task.project.name} · ${task.version?.label ?? '—'}`
 	);
 	const ownerName = $derived(task.owner?.name || task.owner?.email || 'Sem responsável');
 	const creatorName = $derived(task.creator.name || task.creator.email);
@@ -364,13 +383,36 @@
 
 			<label class="flex flex-col gap-xxs">
 				<span class="font-sans text-ui-label uppercase">Projeto</span>
-				<Select.Root type="single" bind:value={form.projectId}>
+				<Select.Root
+					type="single"
+					bind:value={form.projectId}
+					onValueChange={(id) => {
+						form.projectVersionId =
+							projects.find((p) => p.id === id)?.versions[0]?.id ?? '';
+					}}
+				>
 					<Select.Trigger class="w-full">
 						{selectedProject?.name ?? 'Selecione um projeto'}
 					</Select.Trigger>
 					<Select.Content>
 						{#each projects as p (p.id)}
 							<Select.Item value={p.id} label={p.name} />
+						{/each}
+					</Select.Content>
+				</Select.Root>
+			</label>
+
+			<label class="flex flex-col gap-xxs">
+				<span class="font-sans text-ui-label uppercase">Versão</span>
+				<Select.Root type="single" bind:value={form.projectVersionId}>
+					<Select.Trigger class="w-full">
+						{availableVersions.find((v) => v.id === form.projectVersionId)?.label ??
+							task.version?.label ??
+							'Selecione'}
+					</Select.Trigger>
+					<Select.Content>
+						{#each availableVersions as v (v.id)}
+							<Select.Item value={v.id} label={v.label} />
 						{/each}
 					</Select.Content>
 				</Select.Root>

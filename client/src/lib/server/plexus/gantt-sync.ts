@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '../db';
-import { project, task, user } from '../db/schema';
+import { project, projectVersion, task, user } from '../db/schema';
 import { getPlexusConfig } from './config';
 import { createGanttItem, deleteGanttItem, PlexusApiError, updateGanttItem } from './client';
 import {
@@ -16,7 +16,15 @@ const owner = alias(user, 'task_owner');
 export type SyncTaskResult =
 	| { status: 'created' }
 	| { status: 'updated' }
-	| { status: 'skipped'; reason: 'not_configured' | 'no_project_link' | 'no_owner_plexus' | 'not_found' }
+	| {
+			status: 'skipped';
+			reason:
+				| 'not_configured'
+				| 'no_project_link'
+				| 'no_owner_plexus'
+				| 'sync_disabled'
+				| 'not_found';
+	  }
 	| { status: 'error'; message: string };
 
 export type ProjectSyncSummary = {
@@ -128,15 +136,21 @@ async function syncTaskToPlexusGanttStrict(taskId: string): Promise<SyncTaskResu
 			plexusGanttItemId: task.plexusGanttItemId,
 			plexusProjectId: project.plexusProjectId,
 			plexusTopicCode: project.plexusTopicCode,
+			plexusSyncEnabled: projectVersion.plexusSyncEnabled,
 			ownerPlexusUserId: owner.plexusUserId
 		})
 		.from(task)
 		.innerJoin(project, eq(project.id, task.projectId))
+		.innerJoin(projectVersion, eq(projectVersion.id, task.projectVersionId))
 		.leftJoin(owner, eq(owner.id, task.ownerId))
 		.where(eq(task.id, taskId))
 		.limit(1);
 
 	if (!row) return { status: 'skipped', reason: 'not_found' };
+
+	if (!row.plexusSyncEnabled) {
+		return { status: 'skipped', reason: 'sync_disabled' };
+	}
 
 	const scopeId = parsePlexusProjectId(row.plexusProjectId);
 	const topicCode = row.plexusTopicCode?.trim();
